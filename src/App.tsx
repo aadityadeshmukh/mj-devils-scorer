@@ -199,9 +199,16 @@ export default function App() {
         const teamAFirst = activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Batting') : (activeMatch.config.tossDecision === 'Bowling');
         const chasingTeam = teamAFirst ? activeMatch.config.teamBName : activeMatch.config.teamAName;
         const defendingTeam = teamAFirst ? activeMatch.config.teamAName : activeMatch.config.teamBName;
-        const winnerName = secondInningsRuns > firstInningsRuns ? chasingTeam : defendingTeam;
+        
+        let winnerName = '';
+        if (secondInningsRuns === firstInningsRuns) {
+          winnerName = 'Match Tied';
+        } else {
+          winnerName = secondInningsRuns > firstInningsRuns ? chasingTeam : defendingTeam;
+        }
+
         updatedMatch.winner = winnerName;
-        openCustomModal('alert', 'Match Completed 🎉', `The match has ended! Winner: ${winnerName}`, () => {
+        openCustomModal('alert', 'Match Completed 🎉', `The match has ended! Result: ${winnerName === 'Match Tied' ? 'It is a TIE!' : `Winner is ${winnerName}`}`, () => {
           setView('history');
         });
       }
