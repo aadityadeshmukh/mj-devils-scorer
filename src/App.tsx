@@ -27,6 +27,32 @@ export default function App() {
   const [selectedNonStriker, setSelectedNonStriker] = useState('');
   const [selectedBowler, setSelectedBowler] = useState('');
 
+  // Immersive Neural Custom Modal States
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'wide' | 'noball' | 'wicket' | 'alert'>('alert');
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalOnConfirm, setModalOnConfirm] = useState<((data?: any) => void) | null>(null);
+  
+  // Custom Modal input values
+  const [modalInputVal, setModalInputVal] = useState('0');
+  const [modalBoolVal, setModalBoolVal] = useState(false);
+
+  const openCustomModal = (
+    type: 'wide' | 'noball' | 'wicket' | 'alert',
+    title: string,
+    message: string,
+    onConfirm: (data?: any) => void
+  ) => {
+    setModalType(type);
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalOnConfirm(() => onConfirm);
+    setModalInputVal(type === 'wide' ? '1' : '0');
+    setModalBoolVal(false);
+    setModalOpen(true);
+  };
+
   useEffect(() => {
     setMatches(getLocalMatches());
   }, []);
@@ -149,17 +175,20 @@ export default function App() {
     const oversFinished = computedCurrent.ballsBowled >= limitBalls;
 
     if (innings === 1 && (outOfWickets || oversFinished)) {
-      alert("First Innings Completed! Switch innings.");
-      updatedMatch.currentInnings = 2;
-      const teamAFirst = activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Batting') : (activeMatch.config.tossDecision === 'Bowling');
-      const secondBattingTeam = teamAFirst ? activeMatch.config.teamBPlayers : activeMatch.config.teamAPlayers;
-      const secondBowlingTeam = teamAFirst ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers;
-      updatedMatch.striker = secondBattingTeam[0] || 'Batsman 1';
-      updatedMatch.nonStriker = secondBattingTeam[1] || 'Batsman 2';
-      updatedMatch.currentBowler = secondBowlingTeam[0] || 'Bowler 1';
-      setSelectedStriker(updatedMatch.striker);
-      setSelectedNonStriker(updatedMatch.nonStriker);
-      setSelectedBowler(updatedMatch.currentBowler);
+      openCustomModal('alert', 'Innings Complete', 'First Innings Completed! Switching to Second Innings.', () => {
+        updatedMatch.currentInnings = 2;
+        const teamAFirst = activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Batting') : (activeMatch.config.tossDecision === 'Bowling');
+        const secondBattingTeam = teamAFirst ? activeMatch.config.teamBPlayers : activeMatch.config.teamAPlayers;
+        const secondBowlingTeam = teamAFirst ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers;
+        updatedMatch.striker = secondBattingTeam[0] || 'Batsman 1';
+        updatedMatch.nonStriker = secondBattingTeam[1] || 'Batsman 2';
+        updatedMatch.currentBowler = secondBowlingTeam[0] || 'Bowler 1';
+        setSelectedStriker(updatedMatch.striker);
+        setSelectedNonStriker(updatedMatch.nonStriker);
+        setSelectedBowler(updatedMatch.currentBowler);
+        saveLocalMatch(updatedMatch);
+        setMatches(getLocalMatches());
+      });
     } else if (innings === 2) {
       const firstInningsRuns = updatedMatch.firstInnings.runs;
       const secondInningsRuns = computedCurrent.runs;
@@ -172,8 +201,9 @@ export default function App() {
         const defendingTeam = teamAFirst ? activeMatch.config.teamAName : activeMatch.config.teamBName;
         const winnerName = secondInningsRuns > firstInningsRuns ? chasingTeam : defendingTeam;
         updatedMatch.winner = winnerName;
-        alert(`Match completed! Winner: ${winnerName}`);
-        setView('history');
+        openCustomModal('alert', 'Match Completed 🎉', `The match has ended! Winner: ${winnerName}`, () => {
+          setView('history');
+        });
       }
     }
 
@@ -216,30 +246,30 @@ export default function App() {
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', flex: 1, padding: '16px', boxSizing: 'border-box' }}>
       {/* Header bar */}
-      <header className="glass-panel" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Smartphone size={20} className="text-emerald" /> MJ Scoring
+      <header className="glass-panel" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', boxShadow: '0 0 20px rgba(99,102,241,0.1)' }}>
+        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, #a7f3d0 0%, #34d399 50%, #6366f1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <Smartphone size={22} style={{ stroke: '#34d399' }} /> MJ SCORER
         </h1>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setView('lobby')} style={{ padding: '6px 12px', fontSize: '12px' }}>Home</button>
-          <button onClick={() => setView('history')} style={{ padding: '6px 12px', fontSize: '12px' }}>Logs</button>
+          <button onClick={() => setView('lobby')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px' }}>Home</button>
+          <button onClick={() => setView('history')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px' }}>Logs</button>
         </div>
       </header>
 
       {/* Lobby View */}
       {view === 'lobby' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
-          <div className="glass-panel" style={{ padding: '24px', textAlign: 'center' }}>
-            <h2 style={{ marginTop: 0 }}>Society Cricket Matches</h2>
-            <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
+          <div className="glass-panel" style={{ padding: '32px 24px', textAlign: 'center', background: 'radial-gradient(circle at top, rgba(99,102,241,0.15) 0%, rgba(9,13,22,0.4) 100%)' }}>
+            <h2 style={{ marginTop: 0, fontSize: '24px', fontWeight: 800 }}>Society Cricket Matches</h2>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', marginBottom: '28px', lineHeight: '1.6' }}>
               Score local matches ball-by-ball, save detailed records, and share real-time score updates.
             </p>
-            <button onClick={startNewMatchSetup} style={{ width: '100%', background: '#10b981', color: '#fff', fontSize: '16px', fontWeight: 600, padding: '12px' }}>
+            <button onClick={startNewMatchSetup} style={{ width: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', fontSize: '16px', fontWeight: 700, padding: '14px', border: 'none', boxShadow: 'var(--shadow-emerald)' }}>
               Create Match
             </button>
           </div>
 
-          <h3 style={{ margin: '10px 0 0 0' }}>Live & Active Games</h3>
+          <h3 style={{ margin: '10px 0 0 0', fontSize: '18px', fontWeight: 700 }}>Live & Active Games</h3>
           {matches.filter(m => m.status === 'live').length === 0 ? (
             <div className="glass-card" style={{ padding: '20px', textShadow: 'none', textAlign: 'center', color: '#94a3b8' }}>
               No live matches currently. Click Create Match above to start!
@@ -371,25 +401,35 @@ export default function App() {
               <button onClick={() => handleBallScored(4, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0', background: 'rgba(16,185,129,0.1)', border: '1px solid #10b981', color: '#10b981' }}>4</button>
               <button onClick={() => handleBallScored(6, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0', background: 'rgba(16,185,129,0.1)', border: '1px solid #10b981', color: '#10b981' }}>6</button>
               <button onClick={() => {
-                const extraVal = prompt("Enter extra runs scored on Wide (Default is 1):", "1");
-                const val = parseInt(extraVal || "1") || 1;
-                handleBallScored(0, val, 'wide', false);
+                openCustomModal('wide', 'Wide Scored', 'Enter runs scored on this Wide:', (val) => {
+                  handleBallScored(0, val, 'wide', false);
+                });
               }} style={{ fontSize: '14px', padding: '16px 0', background: '#374151' }}>WD</button>
               <button onClick={() => {
-                const offBat = prompt("Enter runs scored off the bat on this No Ball (Enter 0 if none):", "0");
-                const batRuns = parseInt(offBat || "0") || 0;
-                handleBallScored(batRuns, 1, 'noball', false);
+                openCustomModal('noball', 'No Ball Scored', 'Enter runs scored off the bat on this No Ball:', (val) => {
+                  handleBallScored(val, 1, 'noball', false);
+                });
               }} style={{ fontSize: '14px', padding: '16px 0', background: '#374151' }}>NB+</button>
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => {
-                const confirmWicket = confirm("Is this a wicket?");
-                if (!confirmWicket) return;
-                const runsCompleted = prompt("Enter any completed runs on this wicket (e.g. run out, default 0):", "0");
-                const runsVal = parseInt(runsCompleted || "0") || 0;
-                const isRunout = confirm("Is this a Run Out?");
-                handleBallScored(runsVal, 0, null, true, isRunout ? 'runout' : 'bowled');
+                (window as any).__deliveryType = 'legal'; // Reset delivery type default value
+                openCustomModal('wicket', 'Dismissal Event', 'Enter completed runs and dismissal type:', (data) => {
+                  const delType = (window as any).__deliveryType || 'legal';
+                  const isRunout = data.isRunout;
+                  
+                  if (delType === 'noball') {
+                    // 1 run for No Ball (extra), plus completed runs off the bat, plus Wicket
+                    handleBallScored(data.runs, 1, 'noball', true, isRunout ? 'runout' : 'bowled');
+                  } else if (delType === 'wide') {
+                    // Wides don't count off the bat, all runs completed go to extraRuns
+                    handleBallScored(0, data.runs + 1, 'wide', true, isRunout ? 'runout' : 'bowled');
+                  } else {
+                    // Standard legal delivery dismissal
+                    handleBallScored(data.runs, 0, null, true, isRunout ? 'runout' : 'bowled');
+                  }
+                });
               }} style={{ flex: 1, background: '#ef4444', color: '#fff', fontSize: '16px', fontWeight: 600 }}>
                 WICKET+
               </button>
@@ -445,6 +485,115 @@ export default function App() {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* Styled Custom Immersive Modal Overlay */}
+      {modalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(5, 8, 16, 0.85)', backdropFilter: 'blur(10px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px'
+        }}>
+          <div className="glass-panel" style={{
+            width: '100%', maxWidth: '380px', padding: '24px',
+            background: 'radial-gradient(circle at top, rgba(99,102,241,0.2) 0%, rgba(9,13,22,0.95) 100%)',
+            boxShadow: '0 0 40px rgba(52, 211, 153, 0.25)',
+            display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--color-primary-hover)' }}>
+              {modalTitle}
+            </h3>
+            <p style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-secondary)' }}>
+              {modalMessage}
+            </p>
+
+            {/* Inputs based on modal type */}
+            {(modalType === 'wide' || modalType === 'noball') && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', color: '#94a3b8' }}>Runs:</label>
+                <input
+                  type="number"
+                  value={modalInputVal}
+                  onChange={(e) => setModalInputVal(e.target.value)}
+                  style={{ fontSize: '16px', padding: '10px' }}
+                  autoFocus
+                />
+              </div>
+            )}
+
+            {modalType === 'wicket' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', color: '#94a3b8' }}>Completed Runs:</label>
+                  <input
+                    type="number"
+                    value={modalInputVal}
+                    onChange={(e) => setModalInputVal(e.target.value)}
+                    style={{ fontSize: '16px', padding: '10px' }}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                  <input
+                    type="checkbox"
+                    checked={modalBoolVal}
+                    onChange={(e) => setModalBoolVal(e.target.checked)}
+                    id="modalRunoutCheck"
+                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="modalRunoutCheck" style={{ fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                    Dismissal by Run Out?
+                  </label>
+                </div>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px', marginTop: '4px' }}>
+                  <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Delivery Type:</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="radio" name="delivType" defaultChecked onChange={() => (window as any).__deliveryType = 'legal'} style={{ width: '16px', height: '16px' }} /> Legal
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="radio" name="delivType" onChange={() => (window as any).__deliveryType = 'noball'} style={{ width: '16px', height: '16px' }} /> No Ball
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="radio" name="delivType" onChange={() => (window as any).__deliveryType = 'wide'} style={{ width: '16px', height: '16px' }} /> Wide
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              {modalType !== 'alert' && (
+                <button
+                  onClick={() => setModalOpen(false)}
+                  style={{ flex: 1, background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setModalOpen(false);
+                  if (modalOnConfirm) {
+                    if (modalType === 'wicket') {
+                      modalOnConfirm({
+                        runs: parseInt(modalInputVal) || 0,
+                        isRunout: modalBoolVal
+                      });
+                    } else if (modalType === 'wide' || modalType === 'noball') {
+                      modalOnConfirm(parseInt(modalInputVal) || 0);
+                    } else {
+                      modalOnConfirm();
+                    }
+                  }
+                }}
+                style={{ flex: 1, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', fontWeight: 700 }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
