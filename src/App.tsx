@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { 
-  Undo, Swords
+  Undo, Swords, SportShoe
 } from 'lucide-react';
 import { MatchConfig, MatchState, BallRecord } from './types/cricket';
 import { createInitialMatch, computeInningsState } from './utils/scoringEngine';
@@ -37,6 +37,9 @@ export default function App() {
   // Custom Modal input values
   const [modalInputVal, setModalInputVal] = useState('0');
   const [modalBoolVal, setModalBoolVal] = useState(false);
+
+  // Easter Egg Double Tap tracking
+  const [lastTap, setLastTap] = useState(0);
 
   const openCustomModal = (
     type: 'wide' | 'noball' | 'wicket' | 'alert',
@@ -778,6 +781,34 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Subtle Easter Egg trigger in the footer (Double tap to activate) */}
+      <footer style={{ 
+        marginTop: 'auto', paddingTop: '30px', paddingBottom: '10px', 
+        display: 'flex', justifyContent: 'center', opacity: 0.25, transition: 'opacity 0.2s' 
+      }} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.25'}>
+        <button 
+          onClick={() => {
+            const now = Date.now();
+            const DOUBLE_PRESS_DELAY = 300;
+            if (now - lastTap < DOUBLE_PRESS_DELAY) {
+              openCustomModal(
+                'alert', 
+                'About the name "Hermes" ⚡', 
+                'In Greek mythology, Hermes is the swift messenger god of speed, transitions, games, and sports. He represents agility, fast-paced decision making, and strategic wit.',
+                () => {}
+              );
+            }
+            setLastTap(now);
+          }}
+          style={{ 
+            background: 'transparent', border: 'none', boxShadow: 'none', padding: '10px', 
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' 
+          }}
+          title="Hermes Legend (Double Tap)"
+        >
+          <SportShoe size={18} style={{ stroke: 'var(--color-text-secondary)' }} />
+        </button>
+      </footer>
     </div>
   );
 }

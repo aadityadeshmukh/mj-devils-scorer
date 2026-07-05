@@ -1,0 +1,16 @@
+{
+  "short_name": "Hermes",
+  "name": "Hermes - Live Cricket Scorer",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#090d16",
+  "theme_color": "#10b981",
+  "display": "standalone",
+  "orientation": "portrait"
+}
