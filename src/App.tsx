@@ -53,8 +53,114 @@ export default function App() {
     setModalOpen(true);
   };
 
+  // Load matches from Supabase (or LocalStorage fallback) and start real-time sync listeners
   useEffect(() => {
-    setMatches(getLocalMatches());
+    const fetchMatches = async () => {
+      if (supabase) {
+        try {
+          const { data: dbMatches, error } = await supabase
+            .from('matches')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          if (dbMatches) {
+            // For each match, fetch its corresponding ball logs
+            const matchesWithLogs = await Promise.all(
+              dbMatches.map(async (m: any) => {
+                let ballLogs = null;
+                if (supabase) {
+                  const { data } = await supabase
+                    .from('balls_log')
+                    .select('*')
+                    .eq('match_id', m.id)
+                    .order('timestamp', { ascending: true });
+                  ballLogs = data;
+                }
+
+                // Construct MatchConfig
+                const config: MatchConfig = {
+                  teamAName: m.team_a_name,
+                  teamBName: m.team_b_name,
+                  oversLimit: m.overs_limit,
+                  playersPerTeam: 11, // Default fallback
+                  tossWinner: m.toss_winner,
+                  tossDecision: m.toss_decision,
+                  teamAPlayers: [],
+                  teamBPlayers: [],
+                };
+
+                // Map database fields back to React frontend state structures
+                const balls = (ballLogs || []).map((b: any) => ({
+                  id: b.id,
+                  innings: b.innings,
+                  overNum: b.over_num,
+                  ballNum: b.ball_num,
+                  bowler: b.bowler,
+                  batsmanStriker: b.batsman_striker,
+                  batsmanNonStriker: b.batsman_non_striker,
+                  runs: b.runs,
+                  extraRuns: b.extra_runs,
+                  extraType: b.extra_type,
+                  wicket: b.wicket,
+                  wicketType: b.wicket_type,
+                }));
+
+                return {
+                  id: m.id,
+                  config,
+                  status: m.status,
+                  currentInnings: m.current_innings,
+                  striker: balls[balls.length - 1]?.batsmanStriker || '',
+                  nonStriker: balls[balls.length - 1]?.batsmanNonStriker || '',
+                  currentBowler: balls[balls.length - 1]?.bowler || '',
+                  firstInnings: computeInningsState(balls, 1, config),
+                  secondInnings: computeInningsState(balls, 2, config),
+                  ballsLog: balls,
+                  redoStack: [],
+                  winner: m.winner,
+                  createdAt: m.created_at,
+                };
+              })
+            );
+            setMatches(matchesWithLogs);
+          }
+        } catch (err) {
+          console.error("Supabase fetch failed, falling back to LocalStorage:", err);
+          setMatches(getLocalMatches());
+        }
+      } else {
+        setMatches(getLocalMatches());
+      }
+    };
+
+    fetchMatches();
+
+    // Subscribe to real-time database changes if Supabase is active
+    if (supabase) {
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'matches' },
+          () => {
+            fetchMatches();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'balls_log' },
+          () => {
+            fetchMatches();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        if (supabase) supabase.removeChannel(channel);
+      };
+    }
   }, []);
 
   const activeMatch = matches.find(m => m.id === activeMatchId);
