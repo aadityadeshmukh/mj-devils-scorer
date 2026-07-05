@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { 
-  Undo, Smartphone
+  Undo, Swords
 } from 'lucide-react';
 import { MatchConfig, MatchState, BallRecord } from './types/cricket';
 import { createInitialMatch, computeInningsState } from './utils/scoringEngine';
@@ -361,7 +361,7 @@ export default function App() {
       {/* Header bar */}
       <header className="glass-panel" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', boxShadow: '0 0 20px rgba(99,102,241,0.1)' }}>
         <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, #a7f3d0 0%, #34d399 50%, #6366f1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          <Smartphone size={22} style={{ stroke: '#34d399' }} /> MJ SCORER
+          <Swords size={22} style={{ stroke: '#34d399' }} /> HERMES
         </h1>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => setView('lobby')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px' }}>Home</button>
@@ -416,35 +416,104 @@ export default function App() {
       {/* Setup View */}
       {view === 'setup' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
-          <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <h3 style={{ margin: 0 }}>Match Settings</h3>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#94a3b8' }}>Team A Name</label>
-              <input type="text" value={teamAName} onChange={(e) => setTeamAName(e.target.value)} />
+          <div className="glass-panel" style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--color-primary-hover)' }}>Match Setup</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', marginBottom: '6px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Team A Name</label>
+                <input type="text" value={teamAName} onChange={(e) => setTeamAName(e.target.value)} style={{ padding: '12px' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', marginBottom: '6px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Team B Name</label>
+                <input type="text" value={teamBName} onChange={(e) => setTeamBName(e.target.value)} style={{ padding: '12px' }} />
+              </div>
             </div>
+
+            {/* Custom Mobile-Friendly Overs Counter */}
             <div>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#94a3b8' }}>Team B Name</label>
-              <input type="text" value={teamBName} onChange={(e) => setTeamBName(e.target.value)} />
+              <label style={{ display: 'block', fontSize: '11px', marginBottom: '8px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Total Overs</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setOversLimit(Math.max(1, oversLimit - 1))}
+                  style={{ width: '48px', height: '48px', padding: 0, fontSize: '22px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  -
+                </button>
+                <div style={{ 
+                  flex: 1, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  background: 'rgba(17, 24, 39, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px',
+                  fontSize: '18px', fontWeight: 700 
+                }}>
+                  {oversLimit}
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setOversLimit(oversLimit + 1)}
+                  style={{ width: '48px', height: '48px', padding: 0, fontSize: '22px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                >
+                  +
+                </button>
+              </div>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#94a3b8' }}>Total Overs</label>
-              <input type="number" value={oversLimit} onChange={(e) => setOversLimit(parseInt(e.target.value) || 8)} />
+
+            {/* Toss Settings */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', marginBottom: '8px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Toss Winner</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setTossWinner('Team A')}
+                    style={{ 
+                      padding: '12px', border: tossWinner === 'Team A' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                      background: tossWinner === 'Team A' ? 'rgba(16,185,129,0.15)' : 'transparent', fontWeight: 700 
+                    }}
+                  >
+                    {teamAName}
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setTossWinner('Team B')}
+                    style={{ 
+                      padding: '12px', border: tossWinner === 'Team B' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                      background: tossWinner === 'Team B' ? 'rgba(16,185,129,0.15)' : 'transparent', fontWeight: 700 
+                    }}
+                  >
+                    {teamBName}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', marginBottom: '8px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Decision</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setTossDecision('Batting')}
+                    style={{ 
+                      padding: '12px', border: tossDecision === 'Batting' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                      background: tossDecision === 'Batting' ? 'rgba(16,185,129,0.15)' : 'transparent', fontWeight: 700 
+                    }}
+                  >
+                    Batting
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setTossDecision('Bowling')}
+                    style={{ 
+                      padding: '12px', border: tossDecision === 'Bowling' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                      background: tossDecision === 'Bowling' ? 'rgba(16,185,129,0.15)' : 'transparent', fontWeight: 700 
+                    }}
+                  >
+                    Bowling
+                  </button>
+                </div>
+              </div>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#94a3b8' }}>Toss Winner</label>
-              <select value={tossWinner} onChange={(e: any) => setTossWinner(e.target.value)}>
-                <option value="Team A">Team A</option>
-                <option value="Team B">Team B</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#94a3b8' }}>Toss Choice</label>
-              <select value={tossDecision} onChange={(e: any) => setTossDecision(e.target.value)}>
-                <option value="Batting">Batting</option>
-                <option value="Bowling">Bowling</option>
-              </select>
-            </div>
-            <button onClick={handleCreateMatch} style={{ background: '#10b981', color: '#fff', fontSize: '16px', fontWeight: 600, padding: '12px', marginTop: '10px' }}>
+
+            <button onClick={handleCreateMatch} style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 700, padding: '14px', marginTop: '10px', boxShadow: 'var(--shadow-emerald)' }}>
               Start Scoreboard
             </button>
           </div>
