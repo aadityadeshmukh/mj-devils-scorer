@@ -19,8 +19,16 @@ export default function App() {
   const [oversLimit, setOversLimit] = useState(8);
   const [tossWinner, setTossWinner] = useState<'Team A' | 'Team B'>('Team A');
   const [tossDecision, setTossDecision] = useState<'Batting' | 'Bowling'>('Batting');
-  const [teamAPlayers] = useState<string[]>(['Player A1', 'Player A2', 'Player A3', 'Player A4', 'Player A5', 'Player A6']);
-  const [teamBPlayers] = useState<string[]>(['Player B1', 'Player B2', 'Player B3', 'Player B4', 'Player B5', 'Player B6']);
+  
+  // Dynamic Roster Arrays (Initialized to 11 players each)
+  const [teamAPlayers, setTeamAPlayers] = useState<string[]>([
+    'Player A1', 'Player A2', 'Player A3', 'Player A4', 'Player A5', 'Player A6',
+    'Player A7', 'Player A8', 'Player A9', 'Player A10', 'Player A11'
+  ]);
+  const [teamBPlayers, setTeamBPlayers] = useState<string[]>([
+    'Player B1', 'Player B2', 'Player B3', 'Player B4', 'Player B5', 'Player B6',
+    'Player B7', 'Player B8', 'Player B9', 'Player B10', 'Player B11'
+  ]);
 
   // Scorer selections
   const [selectedStriker, setSelectedStriker] = useState('');
@@ -454,6 +462,42 @@ export default function App() {
                 <button 
                   type="button" 
                   onClick={() => setOversLimit(oversLimit + 1)}
+                  style={{ width: '48px', height: '48px', padding: 0, fontSize: '22px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Mobile-Friendly Squad Size Counter */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', marginBottom: '8px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Players per Team</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const nextVal = Math.max(5, teamAPlayers.length - 1);
+                    setTeamAPlayers(Array.from({length: nextVal}, (_, i) => `Player A${i+1}`));
+                    setTeamBPlayers(Array.from({length: nextVal}, (_, i) => `Player B${i+1}`));
+                  }}
+                  style={{ width: '48px', height: '48px', padding: 0, fontSize: '22px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  -
+                </button>
+                <div style={{ 
+                  flex: 1, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  background: 'rgba(17, 24, 39, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px',
+                  fontSize: '18px', fontWeight: 700 
+                }}>
+                  {teamAPlayers.length} Players
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const nextVal = Math.min(16, teamAPlayers.length + 1);
+                    setTeamAPlayers(Array.from({length: nextVal}, (_, i) => `Player A${i+1}`));
+                    setTeamBPlayers(Array.from({length: nextVal}, (_, i) => `Player B${i+1}`));
+                  }}
                   style={{ width: '48px', height: '48px', padding: 0, fontSize: '22px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}
                 >
                   +
