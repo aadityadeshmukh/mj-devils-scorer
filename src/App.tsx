@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { 
-  Undo, Swords, SportShoe
+  Undo, Swords, SportShoe, Flame, Zap, Target, Award, Play, Trophy
 } from 'lucide-react';
 import { MatchConfig, MatchState, BallRecord } from './types/cricket';
 import { createInitialMatch, computeInningsState } from './utils/scoringEngine';
@@ -10,8 +10,13 @@ export default function App() {
   const [matches, setMatches] = useState<MatchState[]>([]);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   
-  // App views: 'lobby' | 'setup' | 'scorer' | 'viewer' | 'history'
-  const [view, setView] = useState<'lobby' | 'setup' | 'scorer' | 'viewer' | 'history'>('lobby');
+  // App views: 'lobby' | 'setup' | 'scorer' | 'viewer' | 'history' | 'players'
+  const [view, setView] = useState<string>('lobby');
+
+  // Players view filtering & sorting states
+  const [playerSearchQuery, setPlayerSearchQuery] = useState('');
+  const [playerSortKey, setPlayerSortKey] = useState<string>('xp');
+  const [playerSortOrder, setPlayerSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Roster inputs & Match setup
   const [teamAName, setTeamAName] = useState('Team A');
@@ -420,8 +425,9 @@ export default function App() {
           <Swords size={22} style={{ stroke: 'var(--brand-color-action)' }} /> HERMES
         </h1>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setView('lobby')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)' }}>Home</button>
-          <button onClick={() => setView('history')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)' }}>Logs</button>
+          <button onClick={() => setView('lobby')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)', background: view === 'lobby' ? 'var(--brand-color-action-bg)' : 'transparent', border: view === 'lobby' ? '1px solid var(--brand-color-action)' : 'none' }}>Home</button>
+          <button onClick={() => setView('players')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)', background: view === 'players' ? 'var(--brand-color-action-bg)' : 'transparent', border: view === 'players' ? '1px solid var(--brand-color-action)' : 'none' }}>Players</button>
+          <button onClick={() => setView('history')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)', background: view === 'history' ? 'var(--brand-color-action-bg)' : 'transparent', border: view === 'history' ? '1px solid var(--brand-color-action)' : 'none' }}>Logs</button>
         </div>
       </header>
 
@@ -1082,6 +1088,426 @@ export default function App() {
           )}
         </div>
       )}
+
+      {/* Players Dashboard View (Gamification) */}
+      {view === 'players' && (() => {
+        const advancedMatches = matches.filter(m => m.status === 'completed' && m.config.recordingMode === 'advanced');
+        const playerStats: Record<string, {
+          runs: number;
+          balls: number;
+          fours: number;
+          sixes: number;
+          overs: number;
+          wickets: number;
+          matchesPlayed: number;
+          matchesWon: number;
+          matchDates: string[];
+        }> = {};
+
+        dbPlayers.forEach(name => {
+          playerStats[name] = { runs: 0, balls: 0, fours: 0, sixes: 0, overs: 0, wickets: 0, matchesPlayed: 0, matchesWon: 0, matchDates: [] };
+        });
+
+        advancedMatches.forEach(m => {
+          const matchDate = m.createdAt || new Date().toISOString();
+          [m.firstInnings, m.secondInnings].forEach(inn => {
+            Object.entries(inn.batsmenStats).forEach(([name, stat]) => {
+              if (!playerStats[name]) {
+                playerStats[name] = { runs: 0, balls: 0, fours: 0, sixes: 0, overs: 0, wickets: 0, matchesPlayed: 0, matchesWon: 0, matchDates: [] };
+              }
+              playerStats[name].runs += stat.runs;
+              playerStats[name].balls += stat.balls;
+              playerStats[name].fours += stat.fours;
+              playerStats[name].sixes += stat.sixes;
+            });
+            Object.entries(inn.bowlerStats).forEach(([name, stat]) => {
+              if (!playerStats[name]) {
+                playerStats[name] = { runs: 0, balls: 0, fours: 0, sixes: 0, overs: 0, wickets: 0, matchesPlayed: 0, matchesWon: 0, matchDates: [] };
+              }
+              playerStats[name].overs += stat.overs;
+              playerStats[name].wickets += stat.wickets;
+            });
+          });
+
+          const allPlayersInMatch = [...m.config.teamAPlayers, ...m.config.teamBPlayers];
+          allPlayersInMatch.forEach(name => {
+            if (playerStats[name]) {
+              playerStats[name].matchesPlayed += 1;
+              playerStats[name].matchDates.push(matchDate);
+              const isTeamA = m.config.teamAPlayers.includes(name);
+              const playerTeamName = isTeamA ? m.config.teamAName : m.config.teamBName;
+              if (m.winner === playerTeamName) {
+                playerStats[name].matchesWon += 1;
+              }
+            }
+          });
+        });
+
+        const playersList = Object.entries(playerStats).map(([name, stat]) => {
+          const boundaryCount = stat.fours + stat.sixes;
+          const totalXP = (stat.runs * 10) + (boundaryCount * 15) + (stat.wickets * 100) + (stat.matchesPlayed * 200) + (stat.matchesWon * 300);
+          
+          let level = 1;
+          let levelName = 'Rookie';
+          let nextThreshold = 1000;
+          let prevThreshold = 0;
+          
+          if (totalXP >= 10000) {
+            level = 5;
+            levelName = 'Cricket Legend';
+            nextThreshold = 10000;
+            prevThreshold = 10000;
+          } else if (totalXP >= 5000) {
+            level = 4;
+            levelName = 'Elite Competitor';
+            nextThreshold = 10000;
+            prevThreshold = 5000;
+          } else if (totalXP >= 2500) {
+            level = 3;
+            levelName = 'Rising Star';
+            nextThreshold = 5000;
+            prevThreshold = 2500;
+          } else if (totalXP >= 1000) {
+            level = 2;
+            levelName = 'Scrappy Batsman';
+            nextThreshold = 2500;
+            prevThreshold = 1000;
+          }
+
+          let isConsistent = false;
+          if (stat.matchDates.length > 0) {
+            const sortedDates = stat.matchDates.map(d => new Date(d).getTime()).sort((a, b) => b - a);
+            const now = Date.now();
+            const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+            const playedLastWeek = (now - sortedDates[0]) <= sevenDaysInMs;
+            
+            if (playedLastWeek) {
+              isConsistent = true;
+              for (let i = 0; i < sortedDates.length - 1; i++) {
+                if ((sortedDates[i] - sortedDates[i + 1]) > sevenDaysInMs) {
+                  isConsistent = false;
+                  break;
+                }
+              }
+            }
+          }
+
+          return {
+            name,
+            stat,
+            boundaryCount,
+            totalXP,
+            level,
+            levelName,
+            prevThreshold,
+            nextThreshold,
+            isConsistent
+          };
+        });
+
+        playersList.sort((a, b) => {
+          let valA = 0;
+          let valB = 0;
+
+          if (playerSortKey === 'xp') {
+            valA = a.totalXP;
+            valB = b.totalXP;
+          } else if (playerSortKey === 'badges') {
+            const countUnlocked = (statObj: typeof a.stat, boundary: number) => {
+              let count = 0;
+              if (statObj.runs >= 100) count++;
+              if (statObj.wickets >= 5) count++;
+              if (boundary >= 10) count++;
+              if (statObj.matchesPlayed >= 5) count++;
+              if (statObj.matchesWon >= 2) count++;
+              return count;
+            };
+            valA = countUnlocked(a.stat, a.boundaryCount);
+            valB = countUnlocked(b.stat, b.boundaryCount);
+          } else if (playerSortKey === 'batter') {
+            valA = a.stat.runs;
+            valB = b.stat.runs;
+          } else if (playerSortKey === 'bowler') {
+            valA = a.stat.wickets;
+            valB = b.stat.wickets;
+          } else if (playerSortKey === 'speed') {
+            valA = a.boundaryCount;
+            valB = b.boundaryCount;
+          } else if (playerSortKey === 'match') {
+            valA = a.stat.matchesPlayed;
+            valB = b.stat.matchesPlayed;
+          } else if (playerSortKey === 'win') {
+            valA = a.stat.matchesWon;
+            valB = b.stat.matchesWon;
+          }
+
+          return playerSortOrder === 'asc' ? valA - valB : valB - valA;
+        });
+
+        const filteredPlayers = playersList.filter(p => 
+          p.name.toLowerCase().includes(playerSearchQuery.toLowerCase())
+        );
+
+        const getBadgeColor = (val: number, bronze: number, silver: number, gold: number) => {
+          if (val >= gold) return '#fbbf24';
+          if (val >= silver) return '#cbd5e1';
+          if (val >= bronze) return '#b45309';
+          return null;
+        };
+
+        const getBadgeText = (val: number, bronze: number, silver: number, gold: number) => {
+          if (val >= gold) return 'Gold';
+          if (val >= silver) return 'Silver';
+          if (val >= bronze) return 'Bronze';
+          return 'Locked';
+        };
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: '440px', margin: '0 auto' }}>
+            <h2 style={{ margin: '0 0 4px 0', textAlign: 'center', width: '100%' }}>Player Profiles</h2>
+            
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '4px', boxSizing: 'border-box' }}>
+              <input
+                type="text"
+                placeholder="Search players by name..."
+                value={playerSearchQuery}
+                onChange={(e) => setPlayerSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  borderRadius: 'var(--brand-border-radius-sm)',
+                  border: '1px solid var(--brand-color-border)',
+                  background: 'var(--brand-color-fill-secondary)',
+                  color: 'var(--brand-color-text)',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div className="glass-panel" style={{ width: '100%', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Tap Icon to Sort Profiles</span>
+                <select 
+                  value={playerSortOrder} 
+                  onChange={(e) => setPlayerSortOrder(e.target.value as any)}
+                  style={{ padding: '4px 8px', fontSize: '11px', height: '28px', width: '110px' }}
+                >
+                  <option value="desc">High ➔ Low</option>
+                  <option value="asc">Low ➔ High</option>
+                </select>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', width: '100%' }}>
+                <button 
+                  onClick={() => setPlayerSortKey('xp')}
+                  style={{ 
+                    flex: 1, padding: '8px 0', fontSize: '11px', 
+                    background: playerSortKey === 'xp' ? 'var(--brand-color-action-bg)' : 'transparent',
+                    border: playerSortKey === 'xp' ? '1px solid var(--brand-color-action)' : '1px solid var(--brand-color-border)'
+                  }}
+                  title="Sort by Total XP"
+                >
+                  XP
+                </button>
+
+                <button 
+                  onClick={() => setPlayerSortKey('badges')}
+                  style={{ 
+                    flex: 1, padding: '8px 0', fontSize: '11px', 
+                    background: playerSortKey === 'badges' ? 'var(--brand-color-action-bg)' : 'transparent',
+                    border: playerSortKey === 'badges' ? '1px solid var(--brand-color-action)' : '1px solid var(--brand-color-border)'
+                  }}
+                  title="Sort by Unlocked Badges count"
+                >
+                  Badges
+                </button>
+
+                <button 
+                  onClick={() => setPlayerSortKey('batter')}
+                  style={{ 
+                    padding: '8px 10px', 
+                    background: playerSortKey === 'batter' ? 'var(--brand-color-action-bg)' : 'transparent',
+                    border: playerSortKey === 'batter' ? '1px solid var(--brand-color-action)' : '1px solid var(--brand-color-border)'
+                  }}
+                  title="Sort by Batter's Blitz (Runs)"
+                >
+                  <Zap size={14} style={{ stroke: playerSortKey === 'batter' ? 'var(--brand-color-action)' : '#94a3b8' }} />
+                </button>
+
+                <button 
+                  onClick={() => setPlayerSortKey('bowler')}
+                  style={{ 
+                    padding: '8px 10px', 
+                    background: playerSortKey === 'bowler' ? 'var(--brand-color-action-bg)' : 'transparent',
+                    border: playerSortKey === 'bowler' ? '1px solid var(--brand-color-action)' : '1px solid var(--brand-color-border)'
+                  }}
+                  title="Sort by Wicket Wizard (Wickets)"
+                >
+                  <Target size={14} style={{ stroke: playerSortKey === 'bowler' ? 'var(--brand-color-action)' : '#94a3b8' }} />
+                </button>
+
+                <button 
+                  onClick={() => setPlayerSortKey('speed')}
+                  style={{ 
+                    padding: '8px 10px', 
+                    background: playerSortKey === 'speed' ? 'var(--brand-color-action-bg)' : 'transparent',
+                    border: playerSortKey === 'speed' ? '1px solid var(--brand-color-action)' : '1px solid var(--brand-color-border)'
+                  }}
+                  title="Sort by Speed Demon (Boundaries)"
+                >
+                  <Award size={14} style={{ stroke: playerSortKey === 'speed' ? 'var(--brand-color-action)' : '#94a3b8' }} />
+                </button>
+
+                <button 
+                  onClick={() => setPlayerSortKey('match')}
+                  style={{ 
+                    padding: '8px 10px', 
+                    background: playerSortKey === 'match' ? 'var(--brand-color-action-bg)' : 'transparent',
+                    border: playerSortKey === 'match' ? '1px solid var(--brand-color-action)' : '1px solid var(--brand-color-border)'
+                  }}
+                  title="Sort by Match Master (Matches)"
+                >
+                  <Play size={14} style={{ stroke: playerSortKey === 'match' ? 'var(--brand-color-action)' : '#94a3b8' }} />
+                </button>
+
+                <button 
+                  onClick={() => setPlayerSortKey('win')}
+                  style={{ 
+                    padding: '8px 10px', 
+                    background: playerSortKey === 'win' ? 'var(--brand-color-action-bg)' : 'transparent',
+                    border: playerSortKey === 'win' ? '1px solid var(--brand-color-action)' : '1px solid var(--brand-color-border)'
+                  }}
+                  title="Sort by Winner's Circle (Wins)"
+                >
+                  <Trophy size={14} style={{ stroke: playerSortKey === 'win' ? 'var(--brand-color-action)' : '#94a3b8' }} />
+                </button>
+              </div>
+            </div>
+
+            {filteredPlayers.length === 0 ? (
+              <div className="glass-card" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', width: '100%' }}>
+                {playerSearchQuery ? 'No players match your search query.' : 'No players onboarded yet.'}
+              </div>
+            ) : (
+              filteredPlayers.map(({ name, stat, boundaryCount, totalXP, level, levelName, prevThreshold, nextThreshold, isConsistent }) => {
+                const percentToNextLevel = level === 5 ? 100 : Math.min(100, Math.max(0, ((totalXP - prevThreshold) / (nextThreshold - prevThreshold)) * 100));
+                const runColor = getBadgeColor(stat.runs, 100, 500, 1000);
+                const runText = getBadgeText(stat.runs, 100, 500, 1000);
+                const wicketColor = getBadgeColor(stat.wickets, 5, 20, 50);
+                const wicketText = getBadgeText(stat.wickets, 5, 20, 50);
+                const speedColor = getBadgeColor(boundaryCount, 10, 50, 100);
+                const speedText = getBadgeText(boundaryCount, 10, 50, 100);
+                const matchColor = getBadgeColor(stat.matchesPlayed, 5, 15, 30);
+                const matchText = getBadgeText(stat.matchesPlayed, 5, 15, 30);
+                const winColor = getBadgeColor(stat.matchesWon, 2, 5, 10);
+                const winText = getBadgeText(stat.matchesWon, 2, 5, 10);
+
+                return (
+                  <div key={name} className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '16px' }}>{name}</span>
+                      <span style={{ fontSize: '11px', background: 'var(--brand-color-action-bg)', color: 'var(--brand-color-action)', padding: '4px 8px', borderRadius: '8px', fontWeight: 700 }}>
+                        Lvl {level} ({levelName})
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--brand-color-text-secondary)' }}>
+                        <span>XP: {totalXP}</span>
+                        {level < 5 && <span>Next: {nextThreshold} XP</span>}
+                      </div>
+                      <div style={{ width: '100%', height: '8px', background: 'var(--brand-color-fill-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${percentToNextLevel}%`, height: '100%', background: 'linear-gradient(90deg, var(--brand-color-action) 0%, var(--brand-color-action-hover) 100%)', borderRadius: '4px' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
+                      <div 
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                          background: isConsistent ? 'rgba(24,86,255,0.1)' : 'rgba(255,255,255,0.03)', 
+                          border: isConsistent ? '1px solid rgba(24,86,255,0.2)' : '1px solid rgba(255,255,255,0.05)',
+                          opacity: isConsistent ? 1 : 0.4
+                        }}
+                        title="Consistent Player streak: Play at least 1 match every week (7 days) without missing."
+                      >
+                        <Flame size={14} style={{ stroke: isConsistent ? 'var(--brand-color-action)' : '#7e7e7e' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 600 }}>Consistent Streak</span>
+                      </div>
+
+                      <div 
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                          background: runColor ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          opacity: runColor ? 1 : 0.4
+                        }}
+                        title={`Batter's Blitz: Total runs scored. Current runs: ${stat.runs}. (Bronze: 100, Silver: 500, Gold: 1000)`}
+                      >
+                        <Zap size={14} style={{ stroke: runColor || '#7e7e7e' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 600 }}>Batter's Blitz: {runText}</span>
+                      </div>
+
+                      <div 
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                          background: wicketColor ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          opacity: wicketColor ? 1 : 0.4
+                        }}
+                        title={`Wicket Wizard: Career wickets taken. Current wickets: ${stat.wickets}. (Bronze: 5, Silver: 20, Gold: 50)`}
+                      >
+                        <Target size={14} style={{ stroke: wicketColor || '#7e7e7e' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 600 }}>Wicket Wizard: {wicketText}</span>
+                      </div>
+
+                      <div 
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                          background: speedColor ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          opacity: speedColor ? 1 : 0.4
+                        }}
+                        title={`Speed Demon: Total boundaries hit (4s + 6s). Current: ${boundaryCount}. (Bronze: 10, Silver: 50, Gold: 100)`}
+                      >
+                        <Award size={14} style={{ stroke: speedColor || '#7e7e7e' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 600 }}>Speed Demon: {speedText}</span>
+                      </div>
+
+                      <div 
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                          background: matchColor ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          opacity: matchColor ? 1 : 0.4
+                        }}
+                        title={`Match Master: Roster matches completed. Current matches: ${stat.matchesPlayed}. (Bronze: 5, Silver: 15, Gold: 30)`}
+                      >
+                        <Play size={14} style={{ stroke: matchColor || '#7e7e7e' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 600 }}>Match Master: {matchText}</span>
+                      </div>
+
+                      <div 
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                          background: winColor ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          opacity: winColor ? 1 : 0.4
+                        }}
+                        title={`Winner's Circle: Total matches won. Current wins: ${stat.matchesWon}. (Bronze: 2, Silver: 5, Gold: 10)`}
+                      >
+                        <Trophy size={14} style={{ stroke: winColor || '#7e7e7e' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 600 }}>Winner's Circle: {winText}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        );
+      })()}
 
       {/* Styled Custom Immersive Modal Overlay */}
       {modalOpen && (
