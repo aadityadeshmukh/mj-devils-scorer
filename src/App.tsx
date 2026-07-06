@@ -19,6 +19,8 @@ export default function App() {
   const [oversLimit, setOversLimit] = useState(8);
   const [tossWinner, setTossWinner] = useState<'Team A' | 'Team B'>('Team A');
   const [tossDecision, setTossDecision] = useState<'Batting' | 'Bowling'>('Batting');
+  const [recordingMode, setRecordingMode] = useState<'basic' | 'advanced'>('basic');
+  const [dbPlayers, setDbPlayers] = useState<string[]>([]); // onboarded players list
   
   // Dynamic Roster Arrays (Initialized to 11 players each)
   const [teamAPlayers, setTeamAPlayers] = useState<string[]>([
@@ -48,6 +50,11 @@ export default function App() {
 
   // Easter Egg Double Tap tracking
   const [lastTap, setLastTap] = useState(0);
+
+  // Device Lock & Ownership Transfer States
+  const [deviceId, setDeviceId] = useState('');
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [inputCode, setInputCode] = useState('');
 
   const openCustomModal = (
     type: 'wide' | 'noball' | 'wicket' | 'alert',
@@ -95,11 +102,12 @@ export default function App() {
                   teamAName: m.team_a_name,
                   teamBName: m.team_b_name,
                   oversLimit: m.overs_limit,
-                  playersPerTeam: 11, // Default fallback
+                  playersPerTeam: m.team_a_players ? m.team_a_players.length : 11,
                   tossWinner: m.toss_winner,
                   tossDecision: m.toss_decision,
-                  teamAPlayers: [],
-                  teamBPlayers: [],
+                  teamAPlayers: m.team_a_players || [],
+                  teamBPlayers: m.team_b_players || [],
+                  recordingMode: m.recording_mode || 'basic',
                 };
 
                 // Map database fields back to React frontend state structures
@@ -132,6 +140,8 @@ export default function App() {
                   redoStack: [],
                   winner: m.winner,
                   createdAt: m.created_at,
+                  deviceLockOwner: m.device_lock_owner || undefined,
+                  transferCode: m.transfer_code || undefined,
                 };
               })
             );
@@ -146,7 +156,30 @@ export default function App() {
       }
     };
 
+    const fetchPlayers = async () => {
+      if (supabase) {
+        try {
+          const { data, error } = await supabase.from('players').select('name');
+          if (error) throw error;
+          if (data) {
+            setDbPlayers(data.map((p: any) => p.name));
+          }
+        } catch (e) {
+          console.error("Failed to fetch players:", e);
+        }
+      }
+    };
+
+    // Initialize device UUID
+    let devId = localStorage.getItem('mj_cricket_device_id');
+    if (!devId) {
+      devId = Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('mj_cricket_device_id', devId);
+    }
+    setDeviceId(devId);
+
     fetchMatches();
+    fetchPlayers();
 
     // Subscribe to real-time database changes if Supabase is active
     if (supabase) {
@@ -190,8 +223,11 @@ export default function App() {
       tossDecision,
       teamAPlayers,
       teamBPlayers,
+      recordingMode,
     };
     const newMatch = createInitialMatch(config);
+    newMatch.deviceLockOwner = deviceId; // Lock match to current device
+    newMatch.transferCode = Math.floor(1000 + Math.random() * 9000).toString(); // Generate 4-digit code
     saveLocalMatch(newMatch);
     setMatches(getLocalMatches());
     setActiveMatchId(newMatch.id);
@@ -222,6 +258,15 @@ export default function App() {
       setSelectedStriker(m.striker || currentBattingTeam[0] || '');
       setSelectedNonStriker(m.nonStriker || currentBattingTeam[1] || '');
       setSelectedBowler(m.currentBowler || currentBowlingTeam[0] || '');
+
+      // Check device lock ownership before entering scorer mode
+      if (targetView === 'scorer' && m.deviceLockOwner && m.deviceLockOwner !== deviceId) {
+        // Not the owner! Force to spectator viewer mode and open transfer modal request
+        setView('viewer');
+        setInputCode('');
+        setTransferModalOpen(true);
+        return;
+      }
     }
     setView(targetView);
   };
@@ -288,7 +333,7 @@ export default function App() {
     // Innings end detection
     const computedCurrent = innings === 1 ? updatedMatch.firstInnings : updatedMatch.secondInnings;
     const limitBalls = activeMatch.config.oversLimit * 6;
-    const outOfWickets = computedCurrent.wickets >= (activeMatch.config.playersPerTeam - 1);
+    const outOfWickets = computedCurrent.wickets >= activeMatch.config.playersPerTeam;
     const oversFinished = computedCurrent.ballsBowled >= limitBalls;
 
     if (innings === 1 && (outOfWickets || oversFinished)) {
@@ -430,6 +475,31 @@ export default function App() {
           <div className="glass-panel" style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--color-primary-hover)' }}>Match Setup</h3>
             
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: 'rgba(17,24,39,0.5)', padding: '4px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <button 
+                type="button"
+                onClick={() => setRecordingMode('basic')}
+                style={{ 
+                  padding: '10px', fontSize: '13px', border: 'none', borderRadius: '10px',
+                  background: recordingMode === 'basic' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
+                  fontWeight: 700, boxShadow: recordingMode === 'basic' ? 'var(--shadow-emerald)' : 'none'
+                }}
+              >
+                Basic Mode
+              </button>
+              <button 
+                type="button"
+                onClick={() => setRecordingMode('advanced')}
+                style={{ 
+                  padding: '10px', fontSize: '13px', border: 'none', borderRadius: '10px',
+                  background: recordingMode === 'advanced' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
+                  fontWeight: 700, boxShadow: recordingMode === 'advanced' ? 'var(--shadow-emerald)' : 'none'
+                }}
+              >
+                Advanced Roster
+              </button>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', marginBottom: '6px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Team A Name</label>
@@ -469,14 +539,14 @@ export default function App() {
               </div>
             </div>
 
-            {/* Custom Mobile-Friendly Squad Size Counter */}
+            {/* Mobile-Friendly Squad Size Counter (Adjustable in both basic and advanced modes) */}
             <div>
               <label style={{ display: 'block', fontSize: '11px', marginBottom: '8px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Players per Team</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button 
                   type="button" 
                   onClick={() => {
-                    const nextVal = Math.max(5, teamAPlayers.length - 1);
+                    const nextVal = Math.max(2, teamAPlayers.length - 1);
                     setTeamAPlayers(Array.from({length: nextVal}, (_, i) => `Player A${i+1}`));
                     setTeamBPlayers(Array.from({length: nextVal}, (_, i) => `Player B${i+1}`));
                   }}
@@ -504,6 +574,96 @@ export default function App() {
                 </button>
               </div>
             </div>
+
+            {/* In Advanced mode, display onboarding options and player list selections */}
+            {recordingMode === 'advanced' && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--color-primary-hover)' }}>Onboard New Player</h4>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input 
+                    type="text" 
+                    id="newPlayerOnboardInput" 
+                    placeholder="Enter full name" 
+                    style={{ flex: 1 }} 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      const input = document.getElementById('newPlayerOnboardInput') as HTMLInputElement;
+                      const name = input?.value?.trim();
+                      if (!name) return;
+                      
+                      // Save to Supabase table 'players'
+                      if (supabase) {
+                        try {
+                          await supabase.from('players').insert([{ name }]);
+                          // Add to current state list
+                          setDbPlayers([...dbPlayers, name]);
+                          input.value = '';
+                          alert(`${name} onboarded successfully!`);
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      } else {
+                        // Local fallback
+                        setDbPlayers([...dbPlayers, name]);
+                        input.value = '';
+                        alert(`${name} onboarded successfully (Local)!`);
+                      }
+                    }}
+                    style={{ background: '#10b981', border: 'none', color: '#fff', fontWeight: 700 }}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+                  <div>
+                    <h5 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#94a3b8' }}>{teamAName} Roster</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {teamAPlayers.map((p, idx) => (
+                        <select 
+                          key={idx} 
+                          value={p} 
+                          onChange={(e) => {
+                            const updated = [...teamAPlayers];
+                            updated[idx] = e.target.value;
+                            setTeamAPlayers(updated);
+                          }}
+                        >
+                          <option value={`Player A${idx+1}`}>{`Player A${idx+1} (Default)`}</option>
+                          {dbPlayers.map((dbP) => (
+                            <option key={dbP} value={dbP}>{dbP}</option>
+                          ))}
+                        </select>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h5 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#94a3b8' }}>{teamBName} Roster</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {teamBPlayers.map((p, idx) => (
+                        <select 
+                          key={idx} 
+                          value={p} 
+                          onChange={(e) => {
+                            const updated = [...teamBPlayers];
+                            updated[idx] = e.target.value;
+                            setTeamBPlayers(updated);
+                          }}
+                        >
+                          <option value={`Player B${idx+1}`}>{`Player B${idx+1} (Default)`}</option>
+                          {dbPlayers.map((dbP) => (
+                            <option key={dbP} value={dbP}>{dbP}</option>
+                          ))}
+                        </select>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Toss Settings */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -572,7 +732,14 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
           {/* Match Score Header */}
           <div className="glass-panel" style={{ padding: '20px', textAlign: 'center' }}>
-            <div className="live-badge" style={{ marginBottom: '10px' }}>Live</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div className="live-badge">Live</div>
+              {activeMatch.transferCode && (
+                <div style={{ fontSize: '11px', color: 'var(--color-primary-hover)', background: 'rgba(16,185,129,0.1)', padding: '4px 8px', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)', fontWeight: 700 }}>
+                  Transfer Code: {activeMatch.transferCode}
+                </div>
+              )}
+            </div>
             <div style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '4px' }}>
               {activeMatch.config.teamAName} vs {activeMatch.config.teamBName}
             </div>
@@ -589,21 +756,82 @@ export default function App() {
             )}
           </div>
 
-          {/* Current Batsmen / Bowler */}
-          <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
-              <span style={{ fontWeight: 600 }}>Striker: 🏏 {selectedStriker}</span>
-              <span>{(activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings).batsmenStats[selectedStriker]?.runs || 0} runs</span>
+          {/* Current Batsmen / Bowler - Dropdowns for Advanced Mode, simple display for Basic Mode */}
+          {activeMatch.config.recordingMode === 'advanced' ? (
+            <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Striker 🏏</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                  <select 
+                    value={selectedStriker} 
+                    onChange={(e) => setSelectedStriker(e.target.value)}
+                    style={{ flex: 1, padding: '8px 12px' }}
+                  >
+                    {(activeMatch.currentInnings === 1 
+                      ? (activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Batting' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers) : (activeMatch.config.tossDecision === 'Bowling' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers))
+                      : (activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Bowling' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers) : (activeMatch.config.tossDecision === 'Batting' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers))
+                    ).map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                  <span style={{ fontSize: '14px', fontWeight: 700 }}>
+                    {(activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings).batsmenStats[selectedStriker]?.runs || 0} runs
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Non-Striker</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                  <select 
+                    value={selectedNonStriker} 
+                    onChange={(e) => setSelectedNonStriker(e.target.value)}
+                    style={{ flex: 1, padding: '8px 12px' }}
+                  >
+                    {(activeMatch.currentInnings === 1 
+                      ? (activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Batting' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers) : (activeMatch.config.tossDecision === 'Bowling' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers))
+                      : (activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Bowling' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers) : (activeMatch.config.tossDecision === 'Batting' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers))
+                    ).map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                  <span style={{ fontSize: '14px', color: '#94a3b8' }}>
+                    {(activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings).batsmenStats[selectedNonStriker]?.runs || 0} runs
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Bowler 🥎</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                  <select 
+                    value={selectedBowler} 
+                    onChange={(e) => setSelectedBowler(e.target.value)}
+                    style={{ flex: 1, padding: '8px 12px' }}
+                  >
+                    {(activeMatch.currentInnings === 1 
+                      ? (activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Bowling' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers) : (activeMatch.config.tossDecision === 'Batting' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers))
+                      : (activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Batting' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers) : (activeMatch.config.tossDecision === 'Bowling' ? activeMatch.config.teamAPlayers : activeMatch.config.teamBPlayers))
+                    ).map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                  <span style={{ fontSize: '14px', fontWeight: 700 }}>
+                    {(activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings).bowlerStats[selectedBowler]?.overs || '0.0'} Overs
+                  </span>
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
-              <span style={{ color: '#94a3b8' }}>Non-Striker: {selectedNonStriker}</span>
-              <span>{(activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings).batsmenStats[selectedNonStriker]?.runs || 0} runs</span>
+          ) : (
+            <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+                <span style={{ fontWeight: 600 }}>Striker: 🏏 {selectedStriker}</span>
+                <span>{(activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings).batsmenStats[selectedStriker]?.runs || 0} runs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+                <span style={{ color: '#94a3b8' }}>Non-Striker: {selectedNonStriker}</span>
+                <span>{(activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings).batsmenStats[selectedNonStriker]?.runs || 0} runs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600 }}>Bowler: 🥎 {selectedBowler}</span>
+                <span>{(activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings).bowlerStats[selectedBowler]?.overs || '0.0'} Overs</span>
+              </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 600 }}>Bowler: 🥎 {selectedBowler}</span>
-              <span>{(activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings).bowlerStats[selectedBowler]?.overs || '0.0'} Overs</span>
-            </div>
-          </div>
+          )}
 
           {/* Active Over Progression */}
           <div className="glass-card" style={{ padding: '12px 16px' }}>
@@ -689,26 +917,30 @@ export default function App() {
       {/* History Log View */}
       {view === 'history' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1 }}>
-          <h2 style={{ margin: '0 0 10px 0' }}>Completed Match Logs</h2>
-          {matches.filter(m => m.status === 'completed').length === 0 ? (
+          <h2 style={{ margin: '0 0 10px 0' }}>Match History & Logs</h2>
+          {matches.filter(m => m.status !== 'live').length === 0 ? (
             <div className="glass-card" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
-              No completed matches in history.
+              No matches found in history.
             </div>
           ) : (
-            matches.filter(m => m.status === 'completed').map(m => (
+            matches.filter(m => m.status !== 'live').map(m => (
               <div key={m.id} className="glass-panel" style={{ padding: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '11px', marginBottom: '8px' }}>
                   <span>{m.createdAt ? new Date(m.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'}) : 'Date Unknown'}</span>
-                  <span>{m.config.oversLimit} Overs</span>
+                  <span>{m.config.oversLimit} Overs ({m.status})</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, marginBottom: '6px' }}>
                   <span>{m.config.teamAName} ({m.firstInnings.runs}/{m.firstInnings.wickets})</span>
                   <span>vs</span>
                   <span>{m.config.teamBName} ({m.secondInnings.runs}/{m.secondInnings.wickets})</span>
                 </div>
-                {m.winner && (
+                {m.winner ? (
                   <div style={{ fontSize: '12px', color: '#10b981', fontWeight: 600 }}>
                     🏆 Winner: {m.winner}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+                    Match Status: {m.status}
                   </div>
                 )}
               </div>
@@ -825,6 +1057,111 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Horizontal Replay Timeline Component (Visible inside active match scorer or viewer mode) */}
+      {(view === 'scorer' || view === 'viewer') && activeMatch && activeMatch.ballsLog.length > 0 && (
+        <div className="glass-panel" style={{ 
+          marginTop: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', 
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.2)' 
+        }}>
+          <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Match Replay Timeline (Scroll ↔)
+          </div>
+          <div style={{ 
+            display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', 
+            scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' 
+          }}>
+            {/* Group balls by over */}
+            {Array.from({ length: Math.ceil(activeMatch.ballsLog.length / 6) }).map((_, overIndex) => {
+              const overBalls = activeMatch.ballsLog.filter(b => b.overNum === overIndex);
+              if (overBalls.length === 0) return null;
+              return (
+                <div key={overIndex} style={{ 
+                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', 
+                  borderRadius: '10px', padding: '8px 12px', display: 'flex', flexDirection: 'column', 
+                  gap: '6px', minWidth: '150px' 
+                }}>
+                  <div style={{ fontSize: '10px', color: '#34d399', fontWeight: 700 }}>
+                    Over {overIndex + 1}
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {overBalls.map((b, bIdx) => (
+                      <div key={bIdx} style={{
+                        width: '24px', height: '24px', borderRadius: '50%', 
+                        background: b.wicket ? '#ef4444' : '#1e293b',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                        fontSize: '9px', fontWeight: 700, border: '1px solid rgba(255,255,255,0.1)'
+                      }}>
+                        {b.wicket ? 'W' : (b.extraType ? (b.extraType === 'wide' ? 'WD' : 'NB') : b.runs)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Device Transfer Code Authentication Modal Overlay */}
+      {transferModalOpen && activeMatch && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(5, 8, 16, 0.9)', backdropFilter: 'blur(12px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '20px'
+        }}>
+          <div className="glass-panel" style={{
+            width: '100%', maxWidth: '360px', padding: '24px',
+            background: 'radial-gradient(circle at top, rgba(99,102,241,0.2) 0%, rgba(9,13,22,0.98) 100%)',
+            display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid rgba(16,185,129,0.3)'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--color-primary-hover)' }}>
+              Transfer Scoring Access ⚡
+            </h3>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>
+              Only one device can score a match at a time to prevent duplicate state sync errors. Enter the 4-digit code shown on the host device to acquire control.
+            </p>
+            <input 
+              type="text" 
+              maxLength={4}
+              placeholder="Enter 4-Digit Code"
+              value={inputCode}
+              onChange={(e) => setInputCode(e.target.value)}
+              style={{ fontSize: '20px', textAlign: 'center', letterSpacing: '0.2em', padding: '10px' }}
+            />
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button 
+                onClick={() => setTransferModalOpen(false)}
+                style={{ flex: 1, background: '#1e293b' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                  if (inputCode.trim() === activeMatch.transferCode) {
+                    // Match code valid! Change owner to current deviceId
+                    const updatedMatch = {
+                      ...activeMatch,
+                      deviceLockOwner: deviceId
+                    };
+                    await saveLocalMatch(updatedMatch);
+                    // Update frontend state list
+                    setMatches(prev => prev.map(m => m.id === activeMatch.id ? updatedMatch : m));
+                    setTransferModalOpen(false);
+                    setView('scorer');
+                    alert("Access acquired! You can now score the match.");
+                  } else {
+                    alert("Invalid transfer code! Please check the host screen.");
+                  }
+                }}
+                style={{ flex: 1, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', fontWeight: 700 }}
+              >
+                Transfer Control
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Subtle Easter Egg trigger in the footer (Double tap to activate) */}
       <footer style={{ 
         marginTop: 'auto', paddingTop: '30px', paddingBottom: '10px', 

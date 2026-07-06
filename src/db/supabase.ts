@@ -44,7 +44,12 @@ export const saveLocalMatch = async (match: any) => {
         current_innings: match.currentInnings,
         status: match.status,
         winner: match.winner || null,
-        created_at: match.createdAt || new Date().toISOString()
+        created_at: match.createdAt || new Date().toISOString(),
+        recording_mode: match.config.recordingMode || 'basic',
+        team_a_players: match.config.teamAPlayers,
+        team_b_players: match.config.teamBPlayers,
+        device_lock_owner: match.deviceLockOwner || null,
+        transfer_code: match.transferCode || null
       };
 
       if (existing) {

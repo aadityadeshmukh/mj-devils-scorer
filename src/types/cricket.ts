@@ -11,6 +11,7 @@ export interface MatchConfig {
   tossDecision: 'Batting' | 'Bowling';
   teamAPlayers: string[];
   teamBPlayers: string[];
+  recordingMode: 'basic' | 'advanced';
 }
 
 export interface BallRecord {
@@ -52,4 +53,6 @@ export interface MatchState {
   redoStack: BallRecord[][]; // stores history of ball logs for redo/undo
   winner?: string; // winner team name
   createdAt?: string; // date of match ISO string
+  deviceLockOwner?: string; // unique ID of current scoring device
+  transferCode?: string; // 4-digit code generated for device transfer
 }
