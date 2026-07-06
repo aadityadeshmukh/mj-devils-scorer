@@ -92,3 +92,37 @@ export const saveLocalMatch = async (match: any) => {
   }
 };
 
+export const getLocalTeams = (): Array<{ name: string; players: string[] }> => {
+  const data = localStorage.getItem('mj_cricket_teams');
+  return data ? JSON.parse(data) : [];
+};
+
+export const saveLocalTeams = async (teams: Array<{ name: string; players: string[] }>) => {
+  localStorage.setItem('mj_cricket_teams', JSON.stringify(teams));
+  if (supabase) {
+    try {
+      // Upsert teams to Supabase schema if table exists
+      for (const t of teams) {
+        const { data: existing } = await supabase
+          .from('teams')
+          .select('name')
+          .eq('name', t.name)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase
+            .from('teams')
+            .update({ players: t.players })
+            .eq('name', t.name);
+        } else {
+          await supabase
+            .from('teams')
+            .insert([{ name: t.name, players: t.players }]);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to sync teams to Supabase:", e);
+    }
+  }
+};
+

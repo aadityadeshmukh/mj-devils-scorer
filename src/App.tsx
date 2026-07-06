@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react';
 import { 
-  Undo, Swords, SportShoe, Flame, Zap, Target, Award, Play, Trophy
+  Undo, Swords, SportShoe, Flame, Zap, Target, Award, Play, Trophy, Menu, X
 } from 'lucide-react';
 import { MatchConfig, MatchState, BallRecord } from './types/cricket';
 import { createInitialMatch, computeInningsState } from './utils/scoringEngine';
-import { getLocalMatches, saveLocalMatch, supabase } from './db/supabase';
+import { getLocalMatches, saveLocalMatch, supabase, getLocalTeams, saveLocalTeams } from './db/supabase';
 
 export default function App() {
   const [matches, setMatches] = useState<MatchState[]>([]);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   
-  // App views: 'lobby' | 'setup' | 'scorer' | 'viewer' | 'history' | 'players'
+  // App views: 'lobby' | 'setup' | 'scorer' | 'viewer' | 'history' | 'players' | 'teams'
   const [view, setView] = useState<string>('lobby');
+
+  // Burger Menu State
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Teams list State
+  const [teams, setTeams] = useState<Array<{ name: string; players: string[] }>>([]);
+  const [selectedTeamAId, setSelectedTeamAId] = useState<string>('');
+  const [selectedTeamBId, setSelectedTeamBId] = useState<string>('');
+  const [newTeamNameInput, setNewTeamNameInput] = useState('');
 
   // Players view filtering & sorting states
   const [playerSearchQuery, setPlayerSearchQuery] = useState('');
@@ -183,8 +192,24 @@ export default function App() {
     }
     setDeviceId(devId);
 
+    const fetchTeams = async () => {
+      if (supabase) {
+        try {
+          const { data, error } = await supabase.from('teams').select('*');
+          if (!error && data) {
+            setTeams(data.map((t: any) => ({ name: t.name, players: t.players || [] })));
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to fetch teams from Supabase:", e);
+        }
+      }
+      setTeams(getLocalTeams());
+    };
+
     fetchMatches();
     fetchPlayers();
+    fetchTeams();
 
     // Subscribe to real-time database changes if Supabase is active
     if (supabase) {
@@ -420,14 +445,75 @@ export default function App() {
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', flex: 1, padding: '16px', boxSizing: 'border-box' }}>
       {/* Header bar */}
-      <header className="glass-panel" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <header className="glass-panel" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', position: 'relative', zIndex: 950 }}>
         <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, #adadad 0%, var(--brand-color-action) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           <Swords size={22} style={{ stroke: 'var(--brand-color-action)' }} /> HERMES
         </h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setView('lobby')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)', background: view === 'lobby' ? 'var(--brand-color-action-bg)' : 'transparent', border: view === 'lobby' ? '1px solid var(--brand-color-action)' : 'none' }}>Home</button>
-          <button onClick={() => setView('players')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)', background: view === 'players' ? 'var(--brand-color-action-bg)' : 'transparent', border: view === 'players' ? '1px solid var(--brand-color-action)' : 'none' }}>Players</button>
-          <button onClick={() => setView('history')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)', background: view === 'history' ? 'var(--brand-color-action-bg)' : 'transparent', border: view === 'history' ? '1px solid var(--brand-color-action)' : 'none' }}>Logs</button>
+        <div style={{ position: 'relative' }}>
+          <button 
+            onClick={() => setMenuOpen(!menuOpen)} 
+            style={{ 
+              padding: '8px', borderRadius: '8px', background: 'transparent', border: 'none', 
+              boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' 
+            }}
+            title="Menu"
+          >
+            {menuOpen ? <X size={24} style={{ stroke: 'var(--brand-color-action)' }} /> : <Menu size={24} style={{ stroke: 'var(--brand-color-text)' }} />}
+          </button>
+          
+          {menuOpen && (
+            <div className="glass-panel" style={{
+              position: 'absolute', top: '44px', right: 0, width: '160px', 
+              display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px', 
+              zIndex: 999, background: 'rgba(9, 13, 22, 0.98)', border: '1px solid rgba(255,255,255,0.12)',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.8)'
+            }}>
+              <button 
+                onClick={() => { setView('lobby'); setMenuOpen(false); }} 
+                style={{ 
+                  width: '100%', textAlign: 'left', padding: '10px 12px', fontSize: '14px', borderRadius: '6px',
+                  background: view === 'lobby' ? 'var(--brand-color-action-bg)' : 'transparent', 
+                  border: view === 'lobby' ? '1px solid var(--brand-color-action)' : '1px solid transparent',
+                  color: view === 'lobby' ? 'var(--brand-color-action)' : 'var(--brand-color-text)'
+                }}
+              >
+                Home
+              </button>
+              <button 
+                onClick={() => { setView('teams'); setMenuOpen(false); }} 
+                style={{ 
+                  width: '100%', textAlign: 'left', padding: '10px 12px', fontSize: '14px', borderRadius: '6px',
+                  background: view === 'teams' ? 'var(--brand-color-action-bg)' : 'transparent', 
+                  border: view === 'teams' ? '1px solid var(--brand-color-action)' : '1px solid transparent',
+                  color: view === 'teams' ? 'var(--brand-color-action)' : 'var(--brand-color-text)'
+                }}
+              >
+                Teams
+              </button>
+              <button 
+                onClick={() => { setView('players'); setMenuOpen(false); }} 
+                style={{ 
+                  width: '100%', textAlign: 'left', padding: '10px 12px', fontSize: '14px', borderRadius: '6px',
+                  background: view === 'players' ? 'var(--brand-color-action-bg)' : 'transparent', 
+                  border: view === 'players' ? '1px solid var(--brand-color-action)' : '1px solid transparent',
+                  color: view === 'players' ? 'var(--brand-color-action)' : 'var(--brand-color-text)'
+                }}
+              >
+                Players
+              </button>
+              <button 
+                onClick={() => { setView('history'); setMenuOpen(false); }} 
+                style={{ 
+                  width: '100%', textAlign: 'left', padding: '10px 12px', fontSize: '14px', borderRadius: '6px',
+                  background: view === 'history' ? 'var(--brand-color-action-bg)' : 'transparent', 
+                  border: view === 'history' ? '1px solid var(--brand-color-action)' : '1px solid transparent',
+                  color: view === 'history' ? 'var(--brand-color-action)' : 'var(--brand-color-text)'
+                }}
+              >
+                History
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -581,90 +667,222 @@ export default function App() {
               </div>
             </div>
 
-            {/* In Advanced mode, display onboarding options and player list selections */}
+            {/* In Advanced mode, display onboarding options, quick load, and player list selections */}
             {recordingMode === 'advanced' && (
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--color-primary-hover)' }}>Onboard New Player</h4>
-                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                  <input 
-                    type="text" 
-                    id="newPlayerOnboardInput" 
-                    placeholder="Enter full name" 
-                    style={{ flex: 1, minWidth: 0 }} 
-                  />
-                  <button 
-                    type="button" 
-                    onClick={async () => {
-                      const input = document.getElementById('newPlayerOnboardInput') as HTMLInputElement;
-                      const name = input?.value?.trim();
-                      if (!name) return;
-                      
-                      // Save to Supabase table 'players'
-                      if (supabase) {
-                        try {
-                          await supabase.from('players').insert([{ name }]);
-                          // Add to current state list
-                          setDbPlayers([...dbPlayers, name]);
-                          input.value = '';
-                          alert(`${name} onboarded successfully!`);
-                        } catch (err) {
-                          console.error(err);
-                        }
-                      } else {
-                        // Local fallback
-                        setDbPlayers([...dbPlayers, name]);
-                        input.value = '';
-                        alert(`${name} onboarded successfully (Local)!`);
-                      }
-                    }}
-                    style={{ background: 'var(--brand-color-action)', border: 'none', color: '#fff', fontWeight: 700, padding: '0 20px', height: '42px', flexShrink: 0 }}
-                  >
-                    Add
-                  </button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
-                  <div>
-                    <h5 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#94a3b8' }}>{teamAName} Roster</h5>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {teamAPlayers.map((p, idx) => (
-                        <select 
-                          key={idx} 
-                          value={p} 
-                          onChange={(e) => {
-                            const updated = [...teamAPlayers];
-                            updated[idx] = e.target.value;
-                            setTeamAPlayers(updated);
-                          }}
-                        >
-                          <option value={`Player A${idx+1}`}>{`Player A${idx+1} (Default)`}</option>
-                          {dbPlayers.map((dbP) => (
-                            <option key={dbP} value={dbP}>{dbP}</option>
-                          ))}
-                        </select>
-                      ))}
+                
+                {/* Load Saved Teams Selector */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--brand-color-action)' }}>Quick Load Teams</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', marginBottom: '6px', color: '#94a3b8' }}>Load Team A</label>
+                      <select
+                        value={selectedTeamAId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedTeamAId(val);
+                          const selected = teams.find(t => t.name === val);
+                          if (selected) {
+                            setTeamAName(selected.name);
+                            setTeamAPlayers(selected.players.length > 0 ? [...selected.players] : ['Player A1']);
+                          } else {
+                            // Reset back to Manual/Custom defaults
+                            setTeamAName('Team A');
+                            setTeamAPlayers(Array.from({ length: teamAPlayers.length }, (_, i) => `Player A${i+1}`));
+                          }
+                        }}
+                        style={{ marginBottom: '6px' }}
+                      >
+                        <option value="">-- Manual/Custom --</option>
+                        {teams.map(t => (
+                          <option key={t.name} value={t.name}>{t.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const saveName = prompt("Enter a unique name to save these squads as a team record:", teamAName);
+                          if (!saveName) return;
+                          
+                          const isNewTeam = !teams.some(t => t.name.toLowerCase() === saveName.toLowerCase());
+                          const newTeamObj = { name: saveName, players: [...teamAPlayers] };
+                          
+                          let updatedTeams;
+                          if (isNewTeam) {
+                            updatedTeams = [...teams, newTeamObj];
+                          } else {
+                            updatedTeams = teams.map(t => t.name.toLowerCase() === saveName.toLowerCase() ? newTeamObj : t);
+                          }
+                          
+                          setTeams(updatedTeams);
+                          await saveLocalTeams(updatedTeams);
+                          alert(`Team "${saveName}" quick saved successfully!`);
+                        }}
+                        style={{ background: 'var(--brand-color-action-bg)', border: '1px solid var(--brand-color-action)', color: 'var(--brand-color-action)', fontSize: '11px', padding: '6px 10px', width: '100%' }}
+                      >
+                        Quick Save Custom Team
+                      </button>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', marginBottom: '6px', color: '#94a3b8' }}>Load Team B</label>
+                      <select
+                        value={selectedTeamBId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedTeamBId(val);
+                          const selected = teams.find(t => t.name === val);
+                          if (selected) {
+                            setTeamBName(selected.name);
+                            setTeamBPlayers(selected.players.length > 0 ? [...selected.players] : ['Player B1']);
+                          } else {
+                            // Reset back to Manual/Custom defaults
+                            setTeamBName('Team B');
+                            setTeamBPlayers(Array.from({ length: teamBPlayers.length }, (_, i) => `Player B${i+1}`));
+                          }
+                        }}
+                        style={{ marginBottom: '6px' }}
+                      >
+                        <option value="">-- Manual/Custom --</option>
+                        {teams.map(t => (
+                          <option key={t.name} value={t.name}>{t.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const saveName = prompt("Enter a unique name to save these squads as a team record:", teamBName);
+                          if (!saveName) return;
+                          
+                          const isNewTeam = !teams.some(t => t.name.toLowerCase() === saveName.toLowerCase());
+                          const newTeamObj = { name: saveName, players: [...teamBPlayers] };
+                          
+                          let updatedTeams;
+                          if (isNewTeam) {
+                            updatedTeams = [...teams, newTeamObj];
+                          } else {
+                            updatedTeams = teams.map(t => t.name.toLowerCase() === saveName.toLowerCase() ? newTeamObj : t);
+                          }
+                          
+                          setTeams(updatedTeams);
+                          await saveLocalTeams(updatedTeams);
+                          alert(`Team "${saveName}" quick saved successfully!`);
+                        }}
+                        style={{ background: 'var(--brand-color-action-bg)', border: '1px solid var(--brand-color-action)', color: 'var(--brand-color-action)', fontSize: '11px', padding: '6px 10px', width: '100%' }}
+                      >
+                        Quick Save Custom Team
+                      </button>
                     </div>
                   </div>
-                  
-                  <div>
-                    <h5 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#94a3b8' }}>{teamBName} Roster</h5>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {teamBPlayers.map((p, idx) => (
-                        <select 
-                          key={idx} 
-                          value={p} 
-                          onChange={(e) => {
-                            const updated = [...teamBPlayers];
-                            updated[idx] = e.target.value;
-                            setTeamBPlayers(updated);
-                          }}
-                        >
-                          <option value={`Player B${idx+1}`}>{`Player B${idx+1} (Default)`}</option>
-                          {dbPlayers.map((dbP) => (
-                            <option key={dbP} value={dbP}>{dbP}</option>
-                          ))}
-                        </select>
-                      ))}
+                </div>
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--color-primary-hover)' }}>Onboard New Player</h4>
+                  <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                    <input 
+                      type="text" 
+                      id="newPlayerOnboardInput" 
+                      placeholder="Enter full name" 
+                      style={{ flex: 1, minWidth: 0 }} 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={async () => {
+                        const input = document.getElementById('newPlayerOnboardInput') as HTMLInputElement;
+                        const name = input?.value?.trim();
+                        if (!name) return;
+                        
+                        // Save to Supabase table 'players'
+                        if (supabase) {
+                          try {
+                            await supabase.from('players').insert([{ name }]);
+                            // Add to current state list
+                            setDbPlayers([...dbPlayers, name]);
+                            input.value = '';
+                            alert(`${name} onboarded successfully!`);
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        } else {
+                          // Local fallback
+                          setDbPlayers([...dbPlayers, name]);
+                          input.value = '';
+                          alert(`${name} onboarded successfully (Local)!`);
+                        }
+                      }}
+                      style={{ background: 'var(--brand-color-action)', border: 'none', color: '#fff', fontWeight: 700, padding: '0 20px', height: '42px', flexShrink: 0 }}
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+                    <div>
+                      <h5 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#94a3b8' }}>{teamAName} Roster</h5>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {teamAPlayers.map((p, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <select 
+                              value={p} 
+                              onChange={(e) => {
+                                const updated = [...teamAPlayers];
+                                updated[idx] = e.target.value;
+                                setTeamAPlayers(updated);
+                              }}
+                              style={{ flex: 1 }}
+                            >
+                              <option value={`Player A${idx+1}`}>{`Player A${idx+1} (Default)`}</option>
+                              {dbPlayers.map((dbP) => (
+                                <option key={dbP} value={dbP}>{dbP}</option>
+                              ))}
+                            </select>
+                            <span
+                              onClick={() => {
+                                const updated = teamAPlayers.filter((_, i) => i !== idx);
+                                setTeamAPlayers(updated.length > 0 ? updated : ['Player A1']);
+                              }}
+                              style={{ color: '#ef4444', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', padding: '0 4px' }}
+                              title="Remove player from roster"
+                            >
+                              ×
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h5 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#94a3b8' }}>{teamBName} Roster</h5>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {teamBPlayers.map((p, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <select 
+                              value={p} 
+                              onChange={(e) => {
+                                const updated = [...teamBPlayers];
+                                updated[idx] = e.target.value;
+                                setTeamBPlayers(updated);
+                              }}
+                              style={{ flex: 1 }}
+                            >
+                              <option value={`Player B${idx+1}`}>{`Player B${idx+1} (Default)`}</option>
+                              {dbPlayers.map((dbP) => (
+                                <option key={dbP} value={dbP}>{dbP}</option>
+                              ))}
+                            </select>
+                            <span
+                              onClick={() => {
+                                const updated = teamBPlayers.filter((_, i) => i !== idx);
+                                setTeamBPlayers(updated.length > 0 ? updated : ['Player B1']);
+                              }}
+                              style={{ color: '#ef4444', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', padding: '0 4px' }}
+                              title="Remove player from roster"
+                            >
+                              ×
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1083,6 +1301,306 @@ export default function App() {
                     </div>
                   </div>
                 )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Teams and Members management tab */}
+      {view === 'teams' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, width: '100%', maxWidth: '440px', margin: '0 auto' }}>
+          <h2 style={{ margin: 0, textAlign: 'center' }}>Teams & Members</h2>
+          
+          {/* Create new Team Section */}
+          <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--brand-color-action)' }}>Create Team</h4>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="text"
+                placeholder="Team Name (e.g. Royals)"
+                value={newTeamNameInput}
+                onChange={(e) => setNewTeamNameInput(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                onClick={async () => {
+                  const name = newTeamNameInput.trim();
+                  if (!name) return;
+                  if (teams.some(t => t.name.toLowerCase() === name.toLowerCase())) {
+                    alert("A team with this name already exists!");
+                    return;
+                  }
+                  const updatedTeams = [...teams, { name, players: [] }];
+                  setTeams(updatedTeams);
+                  await saveLocalTeams(updatedTeams);
+                  setNewTeamNameInput('');
+                  alert(`Team "${name}" created successfully!`);
+                }}
+                style={{ background: 'var(--brand-color-action)', border: 'none', color: '#fff', padding: '0 16px', fontWeight: 700 }}
+              >
+                Create
+              </button>
+            </div>
+          </div>
+
+          {/* List existing teams and allow adding members to them */}
+          {teams.length === 0 ? (
+            <div className="glass-card" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
+              No teams created yet. Use the panel above to add one.
+            </div>
+          ) : (
+            teams.map((t, idx) => (
+              <div key={t.name} className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 700, fontSize: '16px' }}>{t.name}</span>
+                  <button
+                    onClick={async () => {
+                      if (confirm(`Are you sure you want to delete team ${t.name}?`)) {
+                        const updatedTeams = teams.filter(item => item.name !== t.name);
+                        setTeams(updatedTeams);
+                        await saveLocalTeams(updatedTeams);
+                      }
+                    }}
+                    style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '4px 8px', fontSize: '11px' }}
+                  >
+                    Delete
+                  </button>
+                </div>
+
+                {/* Add new member inputs */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <input
+                    type="text"
+                    id={`team-player-input-${idx}`}
+                    placeholder="Player Name"
+                    style={{ flex: 1, padding: '8px' }}
+                  />
+                  <button
+                    onClick={async () => {
+                      const input = document.getElementById(`team-player-input-${idx}`) as HTMLInputElement;
+                      const pName = input?.value?.trim();
+                      if (!pName) return;
+                      if (t.players.includes(pName)) {
+                        alert("Player is already in this team!");
+                        return;
+                      }
+                      
+                      // Update Supabase players catalog if not already there
+                      if (supabase && !dbPlayers.includes(pName)) {
+                        try {
+                          await supabase.from('players').insert([{ name: pName }]);
+                          setDbPlayers(prev => [...prev, pName]);
+                        } catch (e) { console.error(e); }
+                      } else if (!dbPlayers.includes(pName)) {
+                        setDbPlayers(prev => [...prev, pName]);
+                      }
+
+                      const updatedTeams = [...teams];
+                      updatedTeams[idx].players.push(pName);
+                      setTeams(updatedTeams);
+                      await saveLocalTeams(updatedTeams);
+                      input.value = '';
+                    }}
+                    style={{ background: 'var(--brand-color-action-bg)', border: '1px solid var(--brand-color-action)', color: 'var(--brand-color-action)', padding: '0 12px', fontSize: '12px' }}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {/* List players in team */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                  {t.players.length === 0 ? (
+                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>No players in this team yet.</span>
+                  ) : (
+                    t.players.map((player) => (
+                      <span
+                        key={player}
+                        style={{
+                          fontSize: '11px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                          padding: '4px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px'
+                        }}
+                      >
+                        {player}
+                        <span
+                          onClick={async () => {
+                            const updatedTeams = [...teams];
+                            updatedTeams[idx].players = updatedTeams[idx].players.filter(p => p !== player);
+                            setTeams(updatedTeams);
+                            await saveLocalTeams(updatedTeams);
+                          }}
+                          style={{ color: '#ef4444', cursor: 'pointer', fontWeight: 'bold', padding: '0 2px' }}
+                          title="Remove player"
+                        >
+                          ×
+                        </span>
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                {/* Teams Stats Badging Subpanel */}
+                {(() => {
+                  const advancedMatches = matches.filter(m => m.status === 'completed' && m.config.recordingMode === 'advanced');
+                  
+                  let teamMatchesPlayed = 0;
+                  let teamMatchesWon = 0;
+                  let teamRunsScored = 0;
+                  let teamWicketsTaken = 0;
+                  let teamBoundariesHit = 0;
+
+                  advancedMatches.forEach(m => {
+                    const isTeamA = m.config.teamAName.toLowerCase() === t.name.toLowerCase();
+                    const isTeamB = m.config.teamBName.toLowerCase() === t.name.toLowerCase();
+                    
+                    if (isTeamA || isTeamB) {
+                      teamMatchesPlayed += 1;
+                      if (m.winner && m.winner.toLowerCase() === t.name.toLowerCase()) {
+                        teamMatchesWon += 1;
+                      }
+
+                      // Aggregate team innings totals
+                      const statsToSum = isTeamA ? m.firstInnings : m.secondInnings;
+                      const statsOpponent = isTeamA ? m.secondInnings : m.firstInnings;
+                      
+                      // sum runs scored
+                      teamRunsScored += statsToSum.runs;
+                      // wickets taken is wickets fallen in opponent innings
+                      teamWicketsTaken += statsOpponent.wickets;
+
+                      // sum boundaries
+                      Object.values(statsToSum.batsmenStats).forEach((batsman: any) => {
+                        teamBoundariesHit += (batsman.fours || 0) + (batsman.sixes || 0);
+                      });
+                    }
+                  });
+
+                  const totalXP = (teamRunsScored * 5) + (teamBoundariesHit * 10) + (teamWicketsTaken * 50) + (teamMatchesPlayed * 100) + (teamMatchesWon * 200);
+                  
+                  let teamLevel = 1;
+                  let teamLevelName = 'Rookie Squad';
+                  let nextThreshold = 2000;
+                  let prevThreshold = 0;
+
+                  if (totalXP >= 20000) {
+                    teamLevel = 5;
+                    teamLevelName = 'Invincible Giants';
+                    nextThreshold = 20000;
+                    prevThreshold = 20000;
+                  } else if (totalXP >= 10000) {
+                    teamLevel = 4;
+                    teamLevelName = 'Championship Contenders';
+                    nextThreshold = 20000;
+                    prevThreshold = 10000;
+                  } else if (totalXP >= 5000) {
+                    teamLevel = 3;
+                    teamLevelName = 'Powerhouse';
+                    nextThreshold = 10000;
+                    prevThreshold = 5000;
+                  } else if (totalXP >= 2000) {
+                    teamLevel = 2;
+                    teamLevelName = 'Rising Syndicate';
+                    nextThreshold = 5000;
+                    prevThreshold = 2000;
+                  }
+
+                  const getBadgeColor = (val: number, bronze: number, silver: number, gold: number) => {
+                    if (val >= gold) return '#fbbf24';
+                    if (val >= silver) return '#cbd5e1';
+                    if (val >= bronze) return '#b45309';
+                    return null;
+                  };
+
+                  const getBadgeText = (val: number, bronze: number, silver: number, gold: number) => {
+                    if (val >= gold) return 'Gold';
+                    if (val >= silver) return 'Silver';
+                    if (val >= bronze) return 'Bronze';
+                    return 'Locked';
+                  };
+
+                  const runColor = getBadgeColor(teamRunsScored, 500, 1500, 3000);
+                  const runText = getBadgeText(teamRunsScored, 500, 1500, 3000);
+                  const wicketColor = getBadgeColor(teamWicketsTaken, 20, 60, 120);
+                  const wicketText = getBadgeText(teamWicketsTaken, 20, 60, 120);
+                  const boundaryColor = getBadgeColor(teamBoundariesHit, 50, 150, 300);
+                  const boundaryText = getBadgeText(teamBoundariesHit, 50, 150, 300);
+                  const winColor = getBadgeColor(teamMatchesWon, 3, 10, 20);
+                  const winText = getBadgeText(teamMatchesWon, 3, 10, 20);
+
+                  if (teamMatchesPlayed === 0) {
+                    return (
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px', marginTop: '6px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>Play advanced roster matches to earn team level and badges!</span>
+                      </div>
+                    );
+                  }
+
+                  const pct = teamLevel === 5 ? 100 : Math.min(100, Math.max(0, ((totalXP - prevThreshold) / (nextThreshold - prevThreshold)) * 100));
+
+                  return (
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--brand-color-action)' }}>{teamLevelName} (Lvl {teamLevel})</span>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>XP: {totalXP}</span>
+                      </div>
+                      
+                      <div style={{ width: '100%', height: '6px', background: 'var(--brand-color-fill-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, var(--brand-color-action) 0%, var(--brand-color-action-hover) 100%)', borderRadius: '3px' }} />
+                      </div>
+
+                      {/* Team Badges layout */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '4px' }}>
+                        <div 
+                          style={{ 
+                            display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', 
+                            background: runColor ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', 
+                            border: '1px solid rgba(255,255,255,0.04)', opacity: runColor ? 1 : 0.4 
+                          }}
+                          title={`Milestone runs scored as a team. Current runs: ${teamRunsScored}. (Bronze: 500, Silver: 1500, Gold: 3000)`}
+                        >
+                          <Zap size={12} style={{ stroke: runColor || '#7e7e7e' }} />
+                          <span style={{ fontSize: '9px', fontWeight: 600 }}>Runs: {runText}</span>
+                        </div>
+
+                        <div 
+                          style={{ 
+                            display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', 
+                            background: wicketColor ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', 
+                            border: '1px solid rgba(255,255,255,0.04)', opacity: wicketColor ? 1 : 0.4 
+                          }}
+                          title={`Milestone wickets taken as a team. Current wickets: ${teamWicketsTaken}. (Bronze: 20, Silver: 60, Gold: 120)`}
+                        >
+                          <Target size={12} style={{ stroke: wicketColor || '#7e7e7e' }} />
+                          <span style={{ fontSize: '9px', fontWeight: 600 }}>Wickets: {wicketText}</span>
+                        </div>
+
+                        <div 
+                          style={{ 
+                            display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', 
+                            background: boundaryColor ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', 
+                            border: '1px solid rgba(255,255,255,0.04)', opacity: boundaryColor ? 1 : 0.4 
+                          }}
+                          title={`Boundaries hit by team batsmen. Current: ${teamBoundariesHit}. (Bronze: 50, Silver: 150, Gold: 300)`}
+                        >
+                          <Award size={12} style={{ stroke: boundaryColor || '#7e7e7e' }} />
+                          <span style={{ fontSize: '9px', fontWeight: 600 }}>Boundaries: {boundaryText}</span>
+                        </div>
+
+                        <div 
+                          style={{ 
+                            display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', 
+                            background: winColor ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', 
+                            border: '1px solid rgba(255,255,255,0.04)', opacity: winColor ? 1 : 0.4 
+                          }}
+                          title={`Total matches won by team. Current wins: ${teamMatchesWon}. (Bronze: 3, Silver: 10, Gold: 20)`}
+                        >
+                          <Trophy size={12} style={{ stroke: winColor || '#7e7e7e' }} />
+                          <span style={{ fontSize: '9px', fontWeight: 600 }}>Wins: {winText}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ))
           )}
