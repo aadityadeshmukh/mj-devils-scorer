@@ -1527,75 +1527,76 @@ export default function App() {
                   const winColor = getBadgeColor(teamMatchesWon, 3, 10, 20);
                   const winText = getBadgeText(teamMatchesWon, 3, 10, 20);
 
-                  if (teamMatchesPlayed === 0) {
-                    return (
-                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px', marginTop: '6px', textAlign: 'center' }}>
-                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>Play advanced roster matches to earn team level and badges!</span>
-                      </div>
-                    );
-                  }
-
+                  // Show locked badges for teams with 0 matches instead of hiding them completely
                   const pct = teamLevel === 5 ? 100 : Math.min(100, Math.max(0, ((totalXP - prevThreshold) / (nextThreshold - prevThreshold)) * 100));
 
                   return (
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--brand-color-action)' }}>{teamLevelName} (Lvl {teamLevel})</span>
-                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>XP: {totalXP}</span>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--brand-color-action)' }}>{teamLevelName}</span>
+                        <span style={{ fontSize: '11px', background: 'var(--brand-color-action-bg)', color: 'var(--brand-color-action)', padding: '2px 6px', borderRadius: '6px', fontWeight: 700 }}>
+                          Lvl {teamLevel}
+                        </span>
                       </div>
                       
-                      <div style={{ width: '100%', height: '6px', background: 'var(--brand-color-fill-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, var(--brand-color-action) 0%, var(--brand-color-action-hover) 100%)', borderRadius: '3px' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--brand-color-text-secondary)' }}>
+                          <span>XP: {totalXP}</span>
+                          {teamLevel < 5 && <span>Next: {nextThreshold} XP</span>}
+                        </div>
+                        <div style={{ width: '100%', height: '8px', background: 'var(--brand-color-fill-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, var(--brand-color-action) 0%, var(--brand-color-action-hover) 100%)', borderRadius: '4px' }} />
+                        </div>
                       </div>
 
-                      {/* Team Badges layout */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '4px' }}>
+                      {/* Team Badges layout styled like Player Profile badges */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
                         <div 
                           style={{ 
-                            display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', 
-                            background: runColor ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', 
-                            border: '1px solid rgba(255,255,255,0.04)', opacity: runColor ? 1 : 0.4 
+                            display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                            background: runColor ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)', 
+                            border: '1px solid rgba(255,255,255,0.05)', opacity: runColor ? 1 : 0.4 
                           }}
-                          title={`Milestone runs scored as a team. Current runs: ${teamRunsScored}. (Bronze: 500, Silver: 1500, Gold: 3000)`}
+                          title={`Batter's Blitz: Milestone runs scored as a team. Current runs: ${teamRunsScored}. (Bronze: 500, Silver: 1500, Gold: 3000)`}
                         >
-                          <Zap size={12} style={{ stroke: runColor || '#7e7e7e' }} />
-                          <span style={{ fontSize: '9px', fontWeight: 600 }}>Runs: {runText}</span>
+                          <Zap size={14} style={{ stroke: runColor || '#7e7e7e' }} />
+                          <span style={{ fontSize: '10px', fontWeight: 600 }}>Batter's Blitz: {runText}</span>
                         </div>
 
                         <div 
                           style={{ 
-                            display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', 
-                            background: wicketColor ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', 
-                            border: '1px solid rgba(255,255,255,0.04)', opacity: wicketColor ? 1 : 0.4 
+                            display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                            background: wicketColor ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)', 
+                            border: '1px solid rgba(255,255,255,0.05)', opacity: wicketColor ? 1 : 0.4 
                           }}
-                          title={`Milestone wickets taken as a team. Current wickets: ${teamWicketsTaken}. (Bronze: 20, Silver: 60, Gold: 120)`}
+                          title={`Wicket Wizard: Milestone wickets taken as a team. Current wickets: ${teamWicketsTaken}. (Bronze: 20, Silver: 60, Gold: 120)`}
                         >
-                          <Target size={12} style={{ stroke: wicketColor || '#7e7e7e' }} />
-                          <span style={{ fontSize: '9px', fontWeight: 600 }}>Wickets: {wicketText}</span>
+                          <Target size={14} style={{ stroke: wicketColor || '#7e7e7e' }} />
+                          <span style={{ fontSize: '10px', fontWeight: 600 }}>Wicket Wizard: {wicketText}</span>
                         </div>
 
                         <div 
                           style={{ 
-                            display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', 
-                            background: boundaryColor ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', 
-                            border: '1px solid rgba(255,255,255,0.04)', opacity: boundaryColor ? 1 : 0.4 
+                            display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                            background: boundaryColor ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)', 
+                            border: '1px solid rgba(255,255,255,0.05)', opacity: boundaryColor ? 1 : 0.4 
                           }}
-                          title={`Boundaries hit by team batsmen. Current: ${teamBoundariesHit}. (Bronze: 50, Silver: 150, Gold: 300)`}
+                          title={`Speed Demon: Boundaries hit by team batsmen. Current: ${teamBoundariesHit}. (Bronze: 50, Silver: 150, Gold: 300)`}
                         >
-                          <Award size={12} style={{ stroke: boundaryColor || '#7e7e7e' }} />
-                          <span style={{ fontSize: '9px', fontWeight: 600 }}>Boundaries: {boundaryText}</span>
+                          <Award size={14} style={{ stroke: boundaryColor || '#7e7e7e' }} />
+                          <span style={{ fontSize: '10px', fontWeight: 600 }}>Speed Demon: {boundaryText}</span>
                         </div>
 
                         <div 
                           style={{ 
-                            display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', 
-                            background: winColor ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.02)', 
-                            border: '1px solid rgba(255,255,255,0.04)', opacity: winColor ? 1 : 0.4 
+                            display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', 
+                            background: winColor ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)', 
+                            border: '1px solid rgba(255,255,255,0.05)', opacity: winColor ? 1 : 0.4 
                           }}
-                          title={`Total matches won by team. Current wins: ${teamMatchesWon}. (Bronze: 3, Silver: 10, Gold: 20)`}
+                          title={`Winner's Circle: Total matches won by team. Current wins: ${teamMatchesWon}. (Bronze: 3, Silver: 10, Gold: 20)`}
                         >
-                          <Trophy size={12} style={{ stroke: winColor || '#7e7e7e' }} />
-                          <span style={{ fontSize: '9px', fontWeight: 600 }}>Wins: {winText}</span>
+                          <Trophy size={14} style={{ stroke: winColor || '#7e7e7e' }} />
+                          <span style={{ fontSize: '10px', fontWeight: 600 }}>Winner's Circle: {winText}</span>
                         </div>
                       </div>
                     </div>
