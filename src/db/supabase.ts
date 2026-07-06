@@ -32,7 +32,7 @@ export const saveLocalMatch = async (match: any) => {
         .from('matches')
         .select('id')
         .eq('id', match.id)
-        .single();
+        .maybeSingle();
 
       const matchPayload = {
         id: match.id,
