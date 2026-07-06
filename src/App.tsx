@@ -415,25 +415,25 @@ export default function App() {
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', flex: 1, padding: '16px', boxSizing: 'border-box' }}>
       {/* Header bar */}
-      <header className="glass-panel" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', boxShadow: '0 0 20px rgba(99,102,241,0.1)' }}>
-        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, #a7f3d0 0%, #34d399 50%, #6366f1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          <Swords size={22} style={{ stroke: '#34d399' }} /> HERMES
+      <header className="glass-panel" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, #adadad 0%, var(--brand-color-action) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <Swords size={22} style={{ stroke: 'var(--brand-color-action)' }} /> HERMES
         </h1>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setView('lobby')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px' }}>Home</button>
-          <button onClick={() => setView('history')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px' }}>Logs</button>
+          <button onClick={() => setView('lobby')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)' }}>Home</button>
+          <button onClick={() => setView('history')} style={{ padding: '8px 16px', fontSize: '13px', borderRadius: 'var(--brand-border-radius-sm)' }}>Logs</button>
         </div>
       </header>
 
       {/* Lobby View */}
       {view === 'lobby' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
-          <div className="glass-panel" style={{ padding: '32px 24px', textAlign: 'center', background: 'radial-gradient(circle at top, rgba(99,102,241,0.15) 0%, rgba(9,13,22,0.4) 100%)' }}>
+          <div className="glass-panel" style={{ padding: '32px 24px', textAlign: 'center', background: 'radial-gradient(circle at top, rgba(24,86,255,0.15) 0%, rgba(9,13,22,0.4) 100%)' }}>
             <h2 style={{ marginTop: 0, fontSize: '24px', fontWeight: 800 }}>Society Cricket Matches</h2>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', marginBottom: '28px', lineHeight: '1.6' }}>
+            <p style={{ color: 'var(--brand-color-text-secondary)', fontSize: '14px', marginBottom: '28px', lineHeight: '1.6' }}>
               Score local matches ball-by-ball, save detailed records, and share real-time score updates.
             </p>
-            <button onClick={startNewMatchSetup} style={{ width: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', fontSize: '16px', fontWeight: 700, padding: '14px', border: 'none', boxShadow: 'var(--shadow-emerald)' }}>
+            <button onClick={startNewMatchSetup} style={{ width: '100%', background: 'linear-gradient(135deg, var(--brand-color-action) 0%, var(--brand-color-action-hover) 100%)', color: '#fff', fontSize: '16px', fontWeight: 700, padding: '14px', border: 'none' }}>
               Create Match
             </button>
           </div>
@@ -447,7 +447,7 @@ export default function App() {
             matches.filter(m => m.status === 'live').map(m => (
               <div key={m.id} className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="live-badge">Live</span>
+                  <span className="live-badge" style={{ background: 'rgba(24,86,255,0.1)', color: 'var(--brand-color-action)', border: '1px solid rgba(24,86,255,0.2)' }}>Live</span>
                   <span style={{ fontSize: '12px', color: '#94a3b8' }}>{m.config.oversLimit} Overs Match</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '18px' }}>
@@ -456,10 +456,10 @@ export default function App() {
                   <span>{m.config.teamBName}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleSelectActiveMatch(m.id, 'scorer')} style={{ flex: 1, background: '#1e293b' }}>
+                  <button onClick={() => handleSelectActiveMatch(m.id, 'scorer')} style={{ flex: 1, background: 'var(--brand-color-fill-secondary)', border: '1px solid var(--brand-color-border)' }}>
                     Score Match
                   </button>
-                  <button onClick={() => handleSelectActiveMatch(m.id, 'viewer')} style={{ flex: 1, background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
+                  <button onClick={() => handleSelectActiveMatch(m.id, 'viewer')} style={{ flex: 1, background: 'rgba(24,86,255,0.1)', color: 'var(--brand-color-action)', border: '1px solid var(--brand-color-border)' }}>
                     View Live
                   </button>
                 </div>
@@ -473,7 +473,7 @@ export default function App() {
       {view === 'setup' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
           <div className="glass-panel" style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--color-primary-hover)' }}>Match Setup</h3>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--brand-color-action)' }}>Match Setup</h3>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: 'rgba(17,24,39,0.5)', padding: '4px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <button 
@@ -481,8 +481,8 @@ export default function App() {
                 onClick={() => setRecordingMode('basic')}
                 style={{ 
                   padding: '10px', fontSize: '13px', border: 'none', borderRadius: '10px',
-                  background: recordingMode === 'basic' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
-                  fontWeight: 700, boxShadow: recordingMode === 'basic' ? 'var(--shadow-emerald)' : 'none'
+                  background: recordingMode === 'basic' ? 'linear-gradient(135deg, var(--brand-color-action) 0%, var(--brand-color-action-hover) 100%)' : 'transparent',
+                  fontWeight: 700
                 }}
               >
                 Basic Mode
@@ -492,8 +492,8 @@ export default function App() {
                 onClick={() => setRecordingMode('advanced')}
                 style={{ 
                   padding: '10px', fontSize: '13px', border: 'none', borderRadius: '10px',
-                  background: recordingMode === 'advanced' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
-                  fontWeight: 700, boxShadow: recordingMode === 'advanced' ? 'var(--shadow-emerald)' : 'none'
+                  background: recordingMode === 'advanced' ? 'linear-gradient(135deg, var(--brand-color-action) 0%, var(--brand-color-action-hover) 100%)' : 'transparent',
+                  fontWeight: 700
                 }}
               >
                 Advanced Roster
@@ -579,12 +579,12 @@ export default function App() {
             {recordingMode === 'advanced' && (
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--color-primary-hover)' }}>Onboard New Player</h4>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                   <input 
                     type="text" 
                     id="newPlayerOnboardInput" 
                     placeholder="Enter full name" 
-                    style={{ flex: 1 }} 
+                    style={{ flex: 1, minWidth: 0 }} 
                   />
                   <button 
                     type="button" 
@@ -611,7 +611,7 @@ export default function App() {
                         alert(`${name} onboarded successfully (Local)!`);
                       }
                     }}
-                    style={{ background: '#10b981', border: 'none', color: '#fff', fontWeight: 700 }}
+                    style={{ background: 'var(--brand-color-action)', border: 'none', color: '#fff', fontWeight: 700, padding: '0 20px', height: '42px', flexShrink: 0 }}
                   >
                     Add
                   </button>
@@ -674,8 +674,8 @@ export default function App() {
                     type="button"
                     onClick={() => setTossWinner('Team A')}
                     style={{ 
-                      padding: '12px', border: tossWinner === 'Team A' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
-                      background: tossWinner === 'Team A' ? 'rgba(16,185,129,0.15)' : 'transparent', fontWeight: 700 
+                      padding: '12px', border: tossWinner === 'Team A' ? '2px solid var(--brand-color-action)' : '1px solid rgba(255,255,255,0.1)',
+                      background: tossWinner === 'Team A' ? 'var(--brand-color-action-bg)' : 'transparent', fontWeight: 700 
                     }}
                   >
                     {teamAName}
@@ -684,8 +684,8 @@ export default function App() {
                     type="button"
                     onClick={() => setTossWinner('Team B')}
                     style={{ 
-                      padding: '12px', border: tossWinner === 'Team B' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
-                      background: tossWinner === 'Team B' ? 'rgba(16,185,129,0.15)' : 'transparent', fontWeight: 700 
+                      padding: '12px', border: tossWinner === 'Team B' ? '2px solid var(--brand-color-action)' : '1px solid rgba(255,255,255,0.1)',
+                      background: tossWinner === 'Team B' ? 'var(--brand-color-action-bg)' : 'transparent', fontWeight: 700 
                     }}
                   >
                     {teamBName}
@@ -700,8 +700,8 @@ export default function App() {
                     type="button"
                     onClick={() => setTossDecision('Batting')}
                     style={{ 
-                      padding: '12px', border: tossDecision === 'Batting' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
-                      background: tossDecision === 'Batting' ? 'rgba(16,185,129,0.15)' : 'transparent', fontWeight: 700 
+                      padding: '12px', border: tossDecision === 'Batting' ? '2px solid var(--brand-color-action)' : '1px solid rgba(255,255,255,0.1)',
+                      background: tossDecision === 'Batting' ? 'var(--brand-color-action-bg)' : 'transparent', fontWeight: 700 
                     }}
                   >
                     Batting
@@ -710,8 +710,8 @@ export default function App() {
                     type="button"
                     onClick={() => setTossDecision('Bowling')}
                     style={{ 
-                      padding: '12px', border: tossDecision === 'Bowling' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
-                      background: tossDecision === 'Bowling' ? 'rgba(16,185,129,0.15)' : 'transparent', fontWeight: 700 
+                      padding: '12px', border: tossDecision === 'Bowling' ? '2px solid var(--brand-color-action)' : '1px solid rgba(255,255,255,0.1)',
+                      background: tossDecision === 'Bowling' ? 'var(--brand-color-action-bg)' : 'transparent', fontWeight: 700 
                     }}
                   >
                     Bowling
@@ -720,7 +720,7 @@ export default function App() {
               </div>
             </div>
 
-            <button onClick={handleCreateMatch} style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 700, padding: '14px', marginTop: '10px', boxShadow: 'var(--shadow-emerald)' }}>
+            <button onClick={handleCreateMatch} style={{ background: 'linear-gradient(135deg, var(--brand-color-action) 0%, var(--brand-color-action-hover) 100%)', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 700, padding: '14px', marginTop: '10px' }}>
               Start Scoreboard
             </button>
           </div>
@@ -855,8 +855,8 @@ export default function App() {
               <button onClick={() => handleBallScored(1, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0' }}>1</button>
               <button onClick={() => handleBallScored(2, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0' }}>2</button>
               <button onClick={() => handleBallScored(3, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0' }}>3</button>
-              <button onClick={() => handleBallScored(4, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0', background: 'rgba(16,185,129,0.1)', border: '1px solid #10b981', color: '#10b981' }}>4</button>
-              <button onClick={() => handleBallScored(6, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0', background: 'rgba(16,185,129,0.1)', border: '1px solid #10b981', color: '#10b981' }}>6</button>
+              <button onClick={() => handleBallScored(4, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0', background: 'var(--brand-color-success-bg)', border: '1px solid var(--brand-color-link)', color: 'var(--brand-color-link)' }}>4</button>
+              <button onClick={() => handleBallScored(6, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0', background: 'var(--brand-color-success-bg)', border: '1px solid var(--brand-color-link)', color: 'var(--brand-color-link)' }}>6</button>
               <button onClick={() => {
                 openCustomModal('wide', 'Wide Scored', 'Enter runs scored on this Wide:', (val) => {
                   handleBallScored(0, val, 'wide', false);
@@ -935,12 +935,112 @@ export default function App() {
                   <span>{m.config.teamBName} ({m.secondInnings.runs}/{m.secondInnings.wickets})</span>
                 </div>
                 {m.winner ? (
-                  <div style={{ fontSize: '12px', color: '#10b981', fontWeight: 600 }}>
+                  <div style={{ fontSize: '12px', color: 'var(--brand-color-link)', fontWeight: 600, marginBottom: '10px' }}>
                     🏆 Winner: {m.winner}
                   </div>
                 ) : (
-                  <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+                  <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', marginBottom: '10px' }}>
                     Match Status: {m.status}
+                  </div>
+                )}
+
+                {/* Advanced Roster Scorecard Details (Visible only in Advanced mode) */}
+                {m.config.recordingMode === 'advanced' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px', marginTop: '10px' }}>
+                    
+                    {/* First Innings Summary Card */}
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--brand-color-action)' }}>{m.config.tossWinner === 'Team A' ? (m.config.tossDecision === 'Batting' ? m.config.teamAName : m.config.teamBName) : (m.config.tossDecision === 'Batting' ? m.config.teamBName : m.config.teamAName)} Innings</h4>
+                      
+                      {/* Batsmen Stats Table */}
+                      <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1.5fr', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '4px', color: 'var(--brand-color-text-secondary)' }}>
+                          <span>Batsman</span>
+                          <span style={{ textAlign: 'center' }}>R</span>
+                          <span style={{ textAlign: 'center' }}>B</span>
+                          <span style={{ textAlign: 'center' }}>4s</span>
+                          <span style={{ textAlign: 'center' }}>6s</span>
+                          <span style={{ textAlign: 'right' }}>SR</span>
+                        </div>
+                        {Object.entries(m.firstInnings.batsmenStats).map(([name, stat]: [string, any]) => (
+                          <div key={name} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1.5fr', borderBottom: '1px solid rgba(255,255,255,0.02)', paddingBottom: '2px' }}>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                            <span style={{ textAlign: 'center', fontWeight: 700 }}>{stat.runs}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.balls}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.fours}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.sixes}</span>
+                            <span style={{ textAlign: 'right', fontFamily: 'var(--brand-font-family-code)' }}>{stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Bowlers Stats Table */}
+                      <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.5fr', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '4px', color: 'var(--brand-color-text-secondary)' }}>
+                          <span>Bowler</span>
+                          <span style={{ textAlign: 'center' }}>O</span>
+                          <span style={{ textAlign: 'center' }}>R</span>
+                          <span style={{ textAlign: 'center' }}>W</span>
+                          <span style={{ textAlign: 'right' }}>Econ</span>
+                        </div>
+                        {Object.entries(m.firstInnings.bowlerStats).map(([name, stat]: [string, any]) => (
+                          <div key={name} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.5fr', borderBottom: '1px solid rgba(255,255,255,0.02)', paddingBottom: '2px' }}>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.overs}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.runs}</span>
+                            <span style={{ textAlign: 'center', fontWeight: 700, color: 'var(--brand-color-action)' }}>{stat.wickets}</span>
+                            <span style={{ textAlign: 'right', fontFamily: 'var(--brand-font-family-code)' }}>{stat.balls > 0 ? ((stat.runs / stat.balls) * 6).toFixed(2) : '0.00'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Second Innings Summary Card */}
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--brand-color-action)' }}>{m.config.tossWinner === 'Team A' ? (m.config.tossDecision === 'Batting' ? m.config.teamBName : m.config.teamAName) : (m.config.tossDecision === 'Batting' ? m.config.teamAName : m.config.teamBName)} Innings</h4>
+                      
+                      {/* Batsmen Stats Table */}
+                      <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1.5fr', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '4px', color: 'var(--brand-color-text-secondary)' }}>
+                          <span>Batsman</span>
+                          <span style={{ textAlign: 'center' }}>R</span>
+                          <span style={{ textAlign: 'center' }}>B</span>
+                          <span style={{ textAlign: 'center' }}>4s</span>
+                          <span style={{ textAlign: 'center' }}>6s</span>
+                          <span style={{ textAlign: 'right' }}>SR</span>
+                        </div>
+                        {Object.entries(m.secondInnings.batsmenStats).map(([name, stat]: [string, any]) => (
+                          <div key={name} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1.5fr', borderBottom: '1px solid rgba(255,255,255,0.02)', paddingBottom: '2px' }}>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                            <span style={{ textAlign: 'center', fontWeight: 700 }}>{stat.runs}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.balls}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.fours}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.sixes}</span>
+                            <span style={{ textAlign: 'right', fontFamily: 'var(--brand-font-family-code)' }}>{stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Bowlers Stats Table */}
+                      <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.5fr', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '4px', color: 'var(--brand-color-text-secondary)' }}>
+                          <span>Bowler</span>
+                          <span style={{ textAlign: 'center' }}>O</span>
+                          <span style={{ textAlign: 'center' }}>R</span>
+                          <span style={{ textAlign: 'center' }}>W</span>
+                          <span style={{ textAlign: 'right' }}>Econ</span>
+                        </div>
+                        {Object.entries(m.secondInnings.bowlerStats).map(([name, stat]: [string, any]) => (
+                          <div key={name} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.5fr', borderBottom: '1px solid rgba(255,255,255,0.02)', paddingBottom: '2px' }}>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.overs}</span>
+                            <span style={{ textAlign: 'center' }}>{stat.runs}</span>
+                            <span style={{ textAlign: 'center', fontWeight: 700, color: 'var(--brand-color-action)' }}>{stat.wickets}</span>
+                            <span style={{ textAlign: 'right', fontFamily: 'var(--brand-font-family-code)' }}>{stat.balls > 0 ? ((stat.runs / stat.balls) * 6).toFixed(2) : '0.00'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1049,7 +1149,7 @@ export default function App() {
                     }
                   }
                 }}
-                style={{ flex: 1, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', fontWeight: 700 }}
+                style={{ flex: 1, background: 'linear-gradient(135deg, var(--brand-color-link) 0%, var(--brand-color-link-hover) 100%)', border: 'none', fontWeight: 700 }}
               >
                 Confirm
               </button>
@@ -1131,7 +1231,7 @@ export default function App() {
             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
               <button 
                 onClick={() => setTransferModalOpen(false)}
-                style={{ flex: 1, background: '#1e293b' }}
+                style={{ flex: 1, background: 'var(--brand-color-fill-secondary)', border: '1px solid var(--brand-color-border)' }}
               >
                 Cancel
               </button>
@@ -1153,7 +1253,7 @@ export default function App() {
                     alert("Invalid transfer code! Please check the host screen.");
                   }
                 }}
-                style={{ flex: 1, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', fontWeight: 700 }}
+                style={{ flex: 1, background: 'linear-gradient(135deg, var(--brand-color-link) 0%, var(--brand-color-link-hover) 100%)', border: 'none', fontWeight: 700 }}
               >
                 Transfer Control
               </button>
@@ -1187,7 +1287,7 @@ export default function App() {
           }}
           title="Hermes Legend (Double Tap)"
         >
-          <SportShoe size={18} style={{ stroke: 'var(--color-text-secondary)' }} />
+          <SportShoe size={18} style={{ stroke: 'var(--brand-color-text-secondary)' }} />
         </button>
       </footer>
     </div>

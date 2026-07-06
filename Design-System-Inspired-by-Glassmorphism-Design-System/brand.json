@@ -1,0 +1,161 @@
+{
+  "name": "Design System Inspired by Glassmorphism",
+  "tagline": "> Category: Morphism & Effects > Frosted glass effect with translucent layers, subtle blur, and luminous borders for depth and modern elegance.",
+  "description": "> Category: Morphism & Effects > Frosted glass effect with translucent layers, subtle blur, and luminous borders for depth and modern elegance.",
+  "sourceUrl": "https://apple.com/",
+  "logo": {
+    "primary": "logos/favicon.ico",
+    "alternates": [
+      "logos/og-image-1.png"
+    ],
+    "notes": "No logo supplied in pasted DESIGN.md."
+  },
+  "colors": [
+    {
+      "role": "background",
+      "hex": "#ffffff",
+      "oklch": "",
+      "name": "Surface:",
+      "usage": "page canvas"
+    },
+    {
+      "role": "foreground",
+      "hex": "#1856ff",
+      "oklch": "",
+      "name": "Primary:",
+      "usage": "body text and headings"
+    },
+    {
+      "role": "accent",
+      "hex": "#3a344e",
+      "oklch": "",
+      "name": "Secondary:",
+      "usage": "primary actions and emphasis"
+    },
+    {
+      "role": "surface",
+      "hex": "#f6f8ff",
+      "oklch": "",
+      "name": "Surface",
+      "usage": "cards and panels"
+    },
+    {
+      "role": "muted",
+      "hex": "#97b3ff",
+      "oklch": "",
+      "name": "Muted",
+      "usage": "secondary text and metadata"
+    },
+    {
+      "role": "border",
+      "hex": "#dfe7ff",
+      "oklch": "",
+      "name": "Border",
+      "usage": "rules and dividers"
+    },
+    {
+      "role": "accent-secondary",
+      "hex": "#07ca6b",
+      "oklch": "",
+      "name": "Success:",
+      "usage": "secondary actions and links"
+    }
+  ],
+  "typography": {
+    "display": {
+      "family": "Inter",
+      "fallbacks": [
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ],
+      "weights": [
+        400,
+        700
+      ]
+    },
+    "body": {
+      "family": "Inter",
+      "fallbacks": [
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ],
+      "weights": [
+        400,
+        700
+      ]
+    }
+  },
+  "voice": {
+    "adjectives": [],
+    "tone": "> Category: Morphism & Effects > Frosted glass effect with translucent layers, subtle blur, and luminous borders for depth and modern elegance.",
+    "messagingPillars": [
+      "> Category: Morphism & Effects > Frosted glass effect with translucent layers, subtle blur, and luminous borders for depth and modern elegance."
+    ],
+    "vocabulary": {
+      "use": [],
+      "avoid": []
+    }
+  },
+  "imagery": {
+    "style": "",
+    "subjects": [],
+    "treatment": "",
+    "avoid": [],
+    "samples": [
+      {
+        "file": "imagery/cover-0.png",
+        "kind": "cover",
+        "caption": "Social cover image"
+      },
+      {
+        "file": "imagery/hero-1.jpg",
+        "kind": "hero",
+        "caption": "Hero image"
+      },
+      {
+        "file": "imagery/hero-2.jpg",
+        "kind": "hero",
+        "caption": "Hero image 2"
+      },
+      {
+        "file": "imagery/hero-3.jpg",
+        "kind": "hero",
+        "caption": "Hero image 3"
+      },
+      {
+        "file": "imagery/hero-4.jpg",
+        "kind": "hero",
+        "caption": "Hero image 4"
+      },
+      {
+        "file": "imagery/hero-5.jpg",
+        "kind": "hero",
+        "caption": "Hero image 5"
+      },
+      {
+        "file": "imagery/hero-6.jpg",
+        "kind": "hero",
+        "caption": "Hero image 6"
+      },
+      {
+        "file": "imagery/hero-7.jpg",
+        "kind": "hero",
+        "caption": "Hero image 7"
+      }
+    ]
+  },
+  "layout": {
+    "radius": "8px",
+    "borderWeight": "1px",
+    "spacing": "8px baseline grid",
+    "postureRules": []
+  }
+}
