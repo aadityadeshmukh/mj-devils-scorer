@@ -749,11 +749,17 @@ export default function App() {
             <div style={{ color: '#94a3b8', fontSize: '14px' }}>
               Overs: {Math.floor((activeMatch.currentInnings === 1 ? activeMatch.firstInnings.ballsBowled : activeMatch.secondInnings.ballsBowled) / 6)}.{ (activeMatch.currentInnings === 1 ? activeMatch.firstInnings.ballsBowled : activeMatch.secondInnings.ballsBowled) % 6 } / {activeMatch.config.oversLimit}
             </div>
-            {activeMatch.currentInnings === 2 && (
-              <div style={{ marginTop: '8px', color: '#34d399', fontWeight: 600 }}>
-                Target: {activeMatch.firstInnings.runs + 1} runs (Need {activeMatch.firstInnings.runs + 1 - activeMatch.secondInnings.runs} more)
-              </div>
-            )}
+            {activeMatch.currentInnings === 2 && (() => {
+              const totalBallsLimit = activeMatch.config.oversLimit * 6;
+              const ballsRemaining = Math.max(0, totalBallsLimit - activeMatch.secondInnings.ballsBowled);
+              const targetScore = activeMatch.firstInnings.runs + 1;
+              const runsNeeded = targetScore - activeMatch.secondInnings.runs;
+              return (
+                <div style={{ marginTop: '8px', color: 'var(--brand-color-action)', fontWeight: 700, fontSize: '13px' }}>
+                  Target: {targetScore} ({runsNeeded} req in {ballsRemaining} balls)
+                </div>
+              );
+            })()}
           </div>
 
           {/* Current Batsmen / Bowler - Dropdowns for Advanced Mode, simple display for Basic Mode */}
@@ -899,20 +905,48 @@ export default function App() {
       )}
 
       {/* Viewer Dashboard View */}
-      {view === 'viewer' && activeMatch && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
-          <div className="glass-panel" style={{ padding: '24px', textAlign: 'center' }}>
-            <div className="live-badge" style={{ marginBottom: '12px' }}>Live Updates</div>
-            <h2>{activeMatch.config.teamAName} vs {activeMatch.config.teamBName}</h2>
-            <div style={{ fontSize: '36px', fontWeight: 800, margin: '12px 0' }}>
-              {activeMatch.currentInnings === 1 ? activeMatch.firstInnings.runs : activeMatch.secondInnings.runs} / {activeMatch.currentInnings === 1 ? activeMatch.firstInnings.wickets : activeMatch.secondInnings.wickets}
-            </div>
-            <div style={{ color: '#94a3b8' }}>
-              Overs: {Math.floor((activeMatch.currentInnings === 1 ? activeMatch.firstInnings.ballsBowled : activeMatch.secondInnings.ballsBowled) / 6)}.{ (activeMatch.currentInnings === 1 ? activeMatch.firstInnings.ballsBowled : activeMatch.secondInnings.ballsBowled) % 6 } / {activeMatch.config.oversLimit}
+      {view === 'viewer' && activeMatch && (() => {
+        const teamAFirst = activeMatch.config.tossWinner === 'Team A' ? (activeMatch.config.tossDecision === 'Batting') : (activeMatch.config.tossDecision === 'Bowling');
+        const battingTeamName = activeMatch.currentInnings === 1 
+          ? (teamAFirst ? activeMatch.config.teamAName : activeMatch.config.teamBName)
+          : (teamAFirst ? activeMatch.config.teamBName : activeMatch.config.teamAName);
+        
+        const currentInningsState = activeMatch.currentInnings === 1 ? activeMatch.firstInnings : activeMatch.secondInnings;
+        const totalBallsLimit = activeMatch.config.oversLimit * 6;
+        const ballsRemaining = Math.max(0, totalBallsLimit - currentInningsState.ballsBowled);
+        
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+            <div className="glass-panel" style={{ padding: '24px', textAlign: 'center' }}>
+              <div className="live-badge" style={{ marginBottom: '12px', background: 'rgba(24,86,255,0.1)', color: 'var(--brand-color-action)', border: '1px solid rgba(24,86,255,0.2)' }}>Live Updates</div>
+              <h2 style={{ margin: '0 0 4px 0' }}>{activeMatch.config.teamAName} vs {activeMatch.config.teamBName}</h2>
+              <div style={{ fontSize: '13px', color: 'var(--brand-color-action)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                🏏 Batting: {battingTeamName}
+              </div>
+
+              <div style={{ fontSize: '42px', fontWeight: 800, margin: '8px 0', color: 'var(--brand-color-text)' }}>
+                {currentInningsState.runs} / {currentInningsState.wickets}
+              </div>
+              
+              <div style={{ color: 'var(--brand-color-text-secondary)', fontSize: '14px', marginBottom: '12px' }}>
+                Overs: {Math.floor(currentInningsState.ballsBowled / 6)}.{currentInningsState.ballsBowled % 6} / {activeMatch.config.oversLimit}
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '14px', marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--brand-color-text-secondary)' }}>
+                  Balls Remaining: <strong>{ballsRemaining}</strong>
+                </span>
+
+                {activeMatch.currentInnings === 2 && (
+                  <span style={{ fontSize: '14px', color: 'var(--brand-color-action)', fontWeight: 600 }}>
+                    Target: {activeMatch.firstInnings.runs + 1} ({activeMatch.firstInnings.runs + 1 - activeMatch.secondInnings.runs} runs needed from {ballsRemaining} balls)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* History Log View */}
       {view === 'history' && (
@@ -1170,31 +1204,43 @@ export default function App() {
             display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', 
             scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' 
           }}>
-            {/* Group balls by over */}
-            {Array.from({ length: Math.ceil(activeMatch.ballsLog.length / 6) }).map((_, overIndex) => {
-              const overBalls = activeMatch.ballsLog.filter(b => b.overNum === overIndex);
-              if (overBalls.length === 0) return null;
+            {/* Group balls by Innings first, then by Over */}
+            {[1, 2].map((inningsNum) => {
+              const inningsBalls = activeMatch.ballsLog.filter(b => b.innings === inningsNum);
+              if (inningsBalls.length === 0) return null;
+              
+              // Find max over number in this innings
+              const maxOver = Math.max(...inningsBalls.map(b => b.overNum), 0);
+              
               return (
-                <div key={overIndex} style={{ 
-                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', 
-                  borderRadius: '10px', padding: '8px 12px', display: 'flex', flexDirection: 'column', 
-                  gap: '6px', minWidth: '150px' 
-                }}>
-                  <div style={{ fontSize: '10px', color: '#34d399', fontWeight: 700 }}>
-                    Over {overIndex + 1}
-                  </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    {overBalls.map((b, bIdx) => (
-                      <div key={bIdx} style={{
-                        width: '24px', height: '24px', borderRadius: '50%', 
-                        background: b.wicket ? '#ef4444' : '#1e293b',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                        fontSize: '9px', fontWeight: 700, border: '1px solid rgba(255,255,255,0.1)'
+                <div key={inningsNum} style={{ display: 'flex', gap: '12px' }}>
+                  {Array.from({ length: maxOver + 1 }).map((_, overIndex) => {
+                    const overBalls = inningsBalls.filter(b => b.overNum === overIndex);
+                    if (overBalls.length === 0) return null;
+                    return (
+                      <div key={overIndex} style={{ 
+                        background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', 
+                        borderRadius: '10px', padding: '8px 12px', display: 'flex', flexDirection: 'column', 
+                        gap: '6px', minWidth: '150px' 
                       }}>
-                        {b.wicket ? 'W' : (b.extraType ? (b.extraType === 'wide' ? 'WD' : 'NB') : b.runs)}
+                        <div style={{ fontSize: '10px', color: 'var(--brand-color-action)', fontWeight: 700 }}>
+                          Inn {inningsNum} - Over {overIndex + 1}
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          {overBalls.map((b, bIdx) => (
+                            <div key={bIdx} style={{
+                              width: '24px', height: '24px', borderRadius: '50%', 
+                              background: b.wicket ? '#ef4444' : 'var(--brand-color-fill-secondary)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                              fontSize: '9px', fontWeight: 700, border: '1px solid var(--brand-color-border)'
+                            }}>
+                              {b.wicket ? 'W' : (b.extraType ? (b.extraType === 'wide' ? 'WD' : 'NB') : b.runs)}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               );
             })}
