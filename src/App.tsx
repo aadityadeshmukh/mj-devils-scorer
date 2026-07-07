@@ -92,91 +92,97 @@ export default function App() {
     setModalOpen(true);
   };
 
+  const getLocalMatchesSorted = () => {
+    const raw = getLocalMatches();
+    return [...raw].sort((a: any, b: any) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  };
+
+  const fetchMatches = async () => {
+    if (supabase) {
+      try {
+        const { data: dbMatches, error } = await supabase
+          .from('matches')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (dbMatches) {
+          const matchesWithLogs = await Promise.all(
+            dbMatches.map(async (m: any) => {
+              let ballLogs = null;
+              if (supabase) {
+                const { data } = await supabase
+                  .from('balls_log')
+                  .select('*')
+                  .eq('match_id', m.id)
+                  .order('timestamp', { ascending: true });
+                ballLogs = data;
+              }
+
+              const config: MatchConfig = {
+                teamAName: m.team_a_name,
+                teamBName: m.team_b_name,
+                oversLimit: m.overs_limit,
+                playersPerTeam: m.team_a_players ? m.team_a_players.length : 11,
+                tossWinner: m.toss_winner,
+                tossDecision: m.toss_decision,
+                teamAPlayers: m.team_a_players || [],
+                teamBPlayers: m.team_b_players || [],
+                recordingMode: m.recording_mode || 'basic',
+              };
+
+              const balls = (ballLogs || []).map((b: any) => ({
+                id: b.id,
+                innings: b.innings,
+                overNum: b.over_num,
+                ballNum: b.ball_num,
+                bowler: b.bowler,
+                batsmanStriker: b.batsman_striker,
+                batsmanNonStriker: b.batsman_non_striker,
+                runs: b.runs,
+                extraRuns: b.extra_runs,
+                extraType: b.extra_type,
+                wicket: b.wicket,
+                wicketType: b.wicket_type,
+              }));
+
+              return {
+                id: m.id,
+                config,
+                status: m.status,
+                currentInnings: m.current_innings,
+                striker: balls[balls.length - 1]?.batsmanStriker || '',
+                nonStriker: balls[balls.length - 1]?.batsmanNonStriker || '',
+                currentBowler: balls[balls.length - 1]?.bowler || '',
+                firstInnings: computeInningsState(balls, 1, config),
+                secondInnings: computeInningsState(balls, 2, config),
+                ballsLog: balls,
+                redoStack: [],
+                winner: m.winner,
+                createdAt: m.created_at,
+                deviceLockOwner: m.device_lock_owner || undefined,
+                transferCode: m.transfer_code || undefined,
+              };
+            })
+          );
+          setMatches(matchesWithLogs);
+        }
+      } catch (err) {
+        console.error("Supabase fetch failed, falling back to LocalStorage:", err);
+        setMatches(getLocalMatchesSorted());
+      }
+    } else {
+      setMatches(getLocalMatchesSorted());
+    }
+  };
+
   // Load matches from Supabase (or LocalStorage fallback) and start real-time sync listeners
   useEffect(() => {
-    const fetchMatches = async () => {
-      if (supabase) {
-        try {
-          const { data: dbMatches, error } = await supabase
-            .from('matches')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-          if (error) throw error;
-
-          if (dbMatches) {
-            // For each match, fetch its corresponding ball logs
-            const matchesWithLogs = await Promise.all(
-              dbMatches.map(async (m: any) => {
-                let ballLogs = null;
-                if (supabase) {
-                  const { data } = await supabase
-                    .from('balls_log')
-                    .select('*')
-                    .eq('match_id', m.id)
-                    .order('timestamp', { ascending: true });
-                  ballLogs = data;
-                }
-
-                // Construct MatchConfig
-                const config: MatchConfig = {
-                  teamAName: m.team_a_name,
-                  teamBName: m.team_b_name,
-                  oversLimit: m.overs_limit,
-                  playersPerTeam: m.team_a_players ? m.team_a_players.length : 11,
-                  tossWinner: m.toss_winner,
-                  tossDecision: m.toss_decision,
-                  teamAPlayers: m.team_a_players || [],
-                  teamBPlayers: m.team_b_players || [],
-                  recordingMode: m.recording_mode || 'basic',
-                };
-
-                // Map database fields back to React frontend state structures
-                const balls = (ballLogs || []).map((b: any) => ({
-                  id: b.id,
-                  innings: b.innings,
-                  overNum: b.over_num,
-                  ballNum: b.ball_num,
-                  bowler: b.bowler,
-                  batsmanStriker: b.batsman_striker,
-                  batsmanNonStriker: b.batsman_non_striker,
-                  runs: b.runs,
-                  extraRuns: b.extra_runs,
-                  extraType: b.extra_type,
-                  wicket: b.wicket,
-                  wicketType: b.wicket_type,
-                }));
-
-                return {
-                  id: m.id,
-                  config,
-                  status: m.status,
-                  currentInnings: m.current_innings,
-                  striker: balls[balls.length - 1]?.batsmanStriker || '',
-                  nonStriker: balls[balls.length - 1]?.batsmanNonStriker || '',
-                  currentBowler: balls[balls.length - 1]?.bowler || '',
-                  firstInnings: computeInningsState(balls, 1, config),
-                  secondInnings: computeInningsState(balls, 2, config),
-                  ballsLog: balls,
-                  redoStack: [],
-                  winner: m.winner,
-                  createdAt: m.created_at,
-                  deviceLockOwner: m.device_lock_owner || undefined,
-                  transferCode: m.transfer_code || undefined,
-                };
-              })
-            );
-            setMatches(matchesWithLogs);
-          }
-        } catch (err) {
-          console.error("Supabase fetch failed, falling back to LocalStorage:", err);
-          setMatches(getLocalMatches());
-        }
-      } else {
-        setMatches(getLocalMatches());
-      }
-    };
-
     const fetchPlayers = async () => {
       if (supabase) {
         try {
@@ -266,7 +272,7 @@ export default function App() {
     newMatch.deviceLockOwner = deviceId; // Lock match to current device
     newMatch.transferCode = Math.floor(1000 + Math.random() * 9000).toString(); // Generate 4-digit code
     saveLocalMatch(newMatch);
-    setMatches(getLocalMatches());
+    setMatches(prev => [newMatch, ...prev]);
     setActiveMatchId(newMatch.id);
     
     // Choose starting striker, non-striker, bowler
@@ -428,7 +434,7 @@ export default function App() {
     }
 
     saveLocalMatch(updatedMatch);
-    setMatches(getLocalMatches());
+    setMatches(prev => prev.map(m => m.id === updatedMatch.id ? updatedMatch : m));
   };
 
   const handleUndo = async () => {
@@ -460,7 +466,7 @@ export default function App() {
     }
 
     saveLocalMatch(updatedMatch);
-    setMatches(getLocalMatches());
+    setMatches(prev => prev.map(m => m.id === updatedMatch.id ? updatedMatch : m));
   };
 
   return (
@@ -490,7 +496,7 @@ export default function App() {
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.8)'
             }}>
               <button 
-                onClick={() => { setView('lobby'); setMenuOpen(false); }} 
+                onClick={() => { setView('lobby'); setMenuOpen(false); fetchMatches(); }} 
                 style={{ 
                   width: '100%', textAlign: 'left', padding: '10px 12px', fontSize: '14px', borderRadius: '6px',
                   background: view === 'lobby' ? 'var(--brand-color-action-bg)' : 'transparent', 
