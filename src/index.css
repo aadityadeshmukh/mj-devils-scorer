@@ -1,6 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 :root {
-  --brand-font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  --brand-font-family-code: 'SFMono-Regular', Consolas, monospace;
+  --brand-font-family: 'Space Mono', monospace;
+  --brand-font-family-code: 'Space Mono', monospace;
   
   /* Brand color tokens from Design System variables (Dark Mode Defaults) */
   --brand-color-primary: #474451;
@@ -155,6 +157,18 @@ input:focus, select:focus {
   outline: none;
   border-color: var(--brand-color-action);
   box-shadow: 0 0 0 2px rgba(24, 86, 255, 0.2);
+}
+
+/* Typographic weights and structure optimizations for Space Mono */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Numeric text components styling (Score, XP details) */
+span, div, p, select, input, button {
+  letter-spacing: -0.01em;
 }
 
 /* Scrollbar customization */

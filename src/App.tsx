@@ -66,7 +66,14 @@ export default function App() {
   const [lastTap, setLastTap] = useState(0);
 
   // Device Lock & Ownership Transfer States
-  const [deviceId, setDeviceId] = useState('');
+  const [deviceId, setDeviceId] = useState(() => {
+    let devId = localStorage.getItem('mj_cricket_device_id');
+    if (!devId) {
+      devId = Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('mj_cricket_device_id', devId);
+    }
+    return devId;
+  });
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [inputCode, setInputCode] = useState('');
 
@@ -80,7 +87,7 @@ export default function App() {
     setModalTitle(title);
     setModalMessage(message);
     setModalOnConfirm(() => onConfirm);
-    setModalInputVal(type === 'wide' ? '1' : '0');
+    setModalInputVal('0');
     setModalBoolVal(false);
     setModalOpen(true);
   };
@@ -290,7 +297,11 @@ export default function App() {
       setSelectedBowler(m.currentBowler || currentBowlingTeam[0] || '');
 
       // Check device lock ownership before entering scorer mode
-      if (targetView === 'scorer' && m.deviceLockOwner && m.deviceLockOwner !== deviceId) {
+      // If the match exists in this device's localStorage, we bypass the lock checks
+      const localMatches = getLocalMatches();
+      const isLocallyOwned = localMatches.some((lm: any) => lm.id === m.id);
+
+      if (targetView === 'scorer' && m.deviceLockOwner && m.deviceLockOwner !== deviceId && !isLocallyOwned) {
         // Not the owner! Force to spectator viewer mode and open transfer modal request
         setView('viewer');
         setInputCode('');
@@ -403,7 +414,17 @@ export default function App() {
         openCustomModal('alert', 'Match Completed 🎉', `The match has ended! Result: ${winnerName === 'Match Tied' ? 'It is a TIE!' : `Winner is ${winnerName}`}`, () => {
           setView('history');
         });
+      } else if (isOverEnded) {
+        // Prompt user to start next over
+        openCustomModal('alert', 'Over Completed 🛑', `Over ${Math.floor(willBeOversBowled / 6)} has finished! Tap OK to prepare starting the next over.`, () => {
+          // No logic changes, just guiding the user
+        });
       }
+    } else if (isOverEnded) {
+      // Prompt user to start next over
+      openCustomModal('alert', 'Over Completed 🛑', `Over ${Math.floor(willBeOversBowled / 6)} has finished! Tap OK to prepare starting the next over.`, () => {
+        // No logic changes, just guiding the user
+      });
     }
 
     saveLocalMatch(updatedMatch);
@@ -1088,13 +1109,20 @@ export default function App() {
               <button onClick={() => handleBallScored(4, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0', background: 'var(--brand-color-success-bg)', border: '1px solid var(--brand-color-link)', color: 'var(--brand-color-link)' }}>4</button>
               <button onClick={() => handleBallScored(6, 0, null, false)} style={{ fontSize: '18px', padding: '16px 0', background: 'var(--brand-color-success-bg)', border: '1px solid var(--brand-color-link)', color: 'var(--brand-color-link)' }}>6</button>
               <button onClick={() => {
-                openCustomModal('wide', 'Wide Scored', 'Enter runs scored on this Wide:', (val) => {
-                  handleBallScored(0, val, 'wide', false);
+                openCustomModal('wide', 'Wide Scored', '1 wide run is added implicitly. Enter any additional runs scored (e.g. from runs run or boundaries):', (data) => {
+                  const extraRuns = (data?.runs || 0) + 1;
+                  handleBallScored(0, extraRuns, 'wide', false);
                 });
-              }} style={{ fontSize: '14px', padding: '16px 0', background: '#374151' }}>WD</button>
+              }} style={{ fontSize: '14px', padding: '16px 0', background: '#374151' }}>WD+</button>
               <button onClick={() => {
-                openCustomModal('noball', 'No Ball Scored', 'Enter runs scored off the bat on this No Ball:', (val) => {
-                  handleBallScored(val, 1, 'noball', false);
+                openCustomModal('noball', 'No Ball Scored', '1 no ball run is added implicitly. Enter any additional runs scored off the bat or as byes:', (data) => {
+                  const additionalRuns = data?.runs || 0;
+                  const isByes = data?.isByes || false;
+                  if (isByes) {
+                    handleBallScored(0, additionalRuns + 1, 'noball', false);
+                  } else {
+                    handleBallScored(additionalRuns, 1, 'noball', false);
+                  }
                 });
               }} style={{ fontSize: '14px', padding: '16px 0', background: '#374151' }}>NB+</button>
             </div>
@@ -2050,15 +2078,62 @@ export default function App() {
 
             {/* Inputs based on modal type */}
             {(modalType === 'wide' || modalType === 'noball') && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12px', color: '#94a3b8' }}>Runs:</label>
-                <input
-                  type="number"
-                  value={modalInputVal}
-                  onChange={(e) => setModalInputVal(e.target.value)}
-                  style={{ fontSize: '16px', padding: '10px' }}
-                  autoFocus
-                />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', color: '#94a3b8' }}>
+                    {modalType === 'wide' 
+                      ? 'Additional Runs (e.g. byes/runs run, excluding implicit 1 wide):' 
+                      : 'Additional Runs (excluding implicit 1 no ball):'}
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setModalInputVal(prev => String(Math.max(0, (parseInt(prev) || 0) - 1)))}
+                      style={{ width: '48px', height: '48px', padding: 0, fontSize: '22px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      -
+                    </button>
+                    <div style={{ 
+                      flex: 1, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                      background: 'rgba(17, 24, 39, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px',
+                      fontSize: '18px', fontWeight: 700 
+                    }}>
+                      {modalInputVal}
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => setModalInputVal(prev => String((parseInt(prev) || 0) + 1))}
+                      style={{ width: '48px', height: '48px', padding: 0, fontSize: '22px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                {modalType === 'noball' && (
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Runs Type:</label>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input 
+                          type="radio" 
+                          name="nbRunsSource" 
+                          checked={!modalBoolVal} 
+                          onChange={() => setModalBoolVal(false)} 
+                          style={{ width: '16px', height: '16px' }} 
+                        /> Off the Bat
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input 
+                          type="radio" 
+                          name="nbRunsSource" 
+                          checked={modalBoolVal} 
+                          onChange={() => setModalBoolVal(true)} 
+                          style={{ width: '16px', height: '16px' }} 
+                        /> Byes / Leg Byes
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -2066,13 +2141,29 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '12px', color: '#94a3b8' }}>Completed Runs:</label>
-                  <input
-                    type="number"
-                    value={modalInputVal}
-                    onChange={(e) => setModalInputVal(e.target.value)}
-                    style={{ fontSize: '16px', padding: '10px' }}
-                    autoFocus
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setModalInputVal(prev => String(Math.max(0, (parseInt(prev) || 0) - 1)))}
+                      style={{ width: '48px', height: '48px', padding: 0, fontSize: '22px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      -
+                    </button>
+                    <div style={{ 
+                      flex: 1, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                      background: 'rgba(17, 24, 39, 0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px',
+                      fontSize: '18px', fontWeight: 700 
+                    }}>
+                      {modalInputVal}
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => setModalInputVal(prev => String((parseInt(prev) || 0) + 1))}
+                      style={{ width: '48px', height: '48px', padding: 0, fontSize: '22px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
                   <input
@@ -2122,7 +2213,10 @@ export default function App() {
                         isRunout: modalBoolVal
                       });
                     } else if (modalType === 'wide' || modalType === 'noball') {
-                      modalOnConfirm(parseInt(modalInputVal) || 0);
+                      modalOnConfirm({
+                        runs: parseInt(modalInputVal) || 0,
+                        isByes: modalBoolVal
+                      });
                     } else {
                       modalOnConfirm();
                     }
