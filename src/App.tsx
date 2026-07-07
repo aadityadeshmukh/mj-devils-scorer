@@ -560,7 +560,12 @@ export default function App() {
             matches.filter(m => m.status === 'live').map(m => (
               <div key={m.id} className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="live-badge" style={{ background: 'rgba(24,86,255,0.1)', color: 'var(--brand-color-action)', border: '1px solid rgba(24,86,255,0.2)' }}>Live</span>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span className="live-badge" style={{ background: 'rgba(24,86,255,0.1)', color: 'var(--brand-color-action)', border: '1px solid rgba(24,86,255,0.2)' }}>Live</span>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      {m.createdAt ? new Date(m.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Just Now'}
+                    </span>
+                  </div>
                   <span style={{ fontSize: '12px', color: '#94a3b8' }}>{m.config.oversLimit} Overs Match</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '18px' }}>
