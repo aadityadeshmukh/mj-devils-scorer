@@ -539,6 +539,21 @@ export default function App() {
               >
                 History
               </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  window.location.href = "https://github.com/aadityadeshmukh/mj-devils-scorer/raw/cfdcf559c0eede878b3f42d22793f3972dcf1724/mobile/hermes-scricket-scoring.apk";
+                }}
+                style={{ 
+                  width: '100%', textAlign: 'left', padding: '10px 12px', fontSize: '14px', borderRadius: '6px',
+                  background: 'transparent', 
+                  border: '1px solid transparent',
+                  color: 'var(--brand-color-text)',
+                  boxShadow: 'none'
+                }}
+              >
+                Download App
+              </button>
             </div>
           )}
         </div>
