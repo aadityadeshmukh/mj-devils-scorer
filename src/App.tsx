@@ -1359,6 +1359,61 @@ export default function App() {
             </div>
           </div>
 
+
+          {/* Live Ball-by-Ball Commentary (Client-side calculated, not stored in DB) */}
+          {activeMatch && activeMatch.ballsLog.length > 0 && (
+            <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+              <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Live Commentary Feed
+              </div>
+              <div style={{ 
+                maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', 
+                fontSize: '12px', paddingRight: '4px', scrollbarWidth: 'thin'
+              }}>
+                {[...activeMatch.ballsLog].reverse().map((b, idx) => {
+                  const overDisplay = `${b.overNum}.${b.ballNum}`;
+                  const isAdvanced = activeMatch.config.recordingMode === 'advanced';
+                  const batter = isAdvanced ? b.batsmanStriker : 'Batsman';
+                  const bowler = isAdvanced ? b.bowler : 'Bowler';
+                  
+                  let desc = '';
+                  if (b.wicket) {
+                    const wType = b.wicketType ? b.wicketType.toUpperCase() : 'OUT';
+                    desc = `🔴 OVER ${overDisplay}: WICKET! ${bowler} to ${batter} - ${wType}!`;
+                  } else if (b.extraType) {
+                    if (b.extraType === 'wide') {
+                      desc = `⚪ OVER ${overDisplay}: WIDE! ${bowler} bowls wide down leg/off. (+${b.extraRuns} Extra)`;
+                    } else if (b.extraType === 'noball') {
+                      desc = `⚠ OVER ${overDisplay}: NO BALL! ${bowler} oversteps. (+${b.extraRuns} Extra)`;
+                    } else {
+                      desc = `🔵 OVER ${overDisplay}: ${bowler} to ${batter} - ${b.extraRuns} ${b.extraType.toUpperCase()}(s).`;
+                    }
+                  } else {
+                    if (b.runs === 4) {
+                      desc = `🔥 OVER ${overDisplay}: FOUR! Shot! ${batter} drives ${bowler} past the boundary!`;
+                    } else if (b.runs === 6) {
+                      desc = `🚀 OVER ${overDisplay}: SIX! Massive strike! ${batter} hits ${bowler} high over the ropes!`;
+                    } else if (b.runs === 0) {
+                      desc = `⏹ OVER ${overDisplay}: Dot ball. ${bowler} pitches it cleanly, ${batter} plays it back.`;
+                    } else {
+                      desc = `🏏 OVER ${overDisplay}: ${bowler} to ${batter}, ${b.runs} run${b.runs > 1 ? 's' : ''} taken.`;
+                    }
+                  }
+
+                  return (
+                    <div key={b.id || idx} style={{ 
+                      padding: '6px 10px', background: b.wicket ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.02)',
+                      borderLeft: b.wicket ? '3px solid #ef4444' : (b.runs >= 4 ? '3px solid var(--brand-color-link)' : '3px solid rgba(255,255,255,0.08)'),
+                      borderRadius: '4px', lineHeight: '1.4'
+                    }}>
+                      {desc}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Match Replay Timeline */}
           {activeMatch && activeMatch.ballsLog.length > 0 && (
             <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
@@ -1464,6 +1519,61 @@ export default function App() {
                 </button>
               </div>
             </div>
+
+
+            {/* Live Ball-by-Ball Commentary (Client-side calculated, not stored in DB) */}
+            {activeMatch && activeMatch.ballsLog.length > 0 && (
+              <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Live Commentary Feed
+                </div>
+                <div style={{ 
+                  maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', 
+                  fontSize: '12px', paddingRight: '4px', scrollbarWidth: 'thin'
+                }}>
+                  {[...activeMatch.ballsLog].reverse().map((b, idx) => {
+                    const overDisplay = `${b.overNum}.${b.ballNum}`;
+                    const isAdvanced = activeMatch.config.recordingMode === 'advanced';
+                    const batter = isAdvanced ? b.batsmanStriker : 'Batsman';
+                    const bowler = isAdvanced ? b.bowler : 'Bowler';
+                    
+                    let desc = '';
+                    if (b.wicket) {
+                      const wType = b.wicketType ? b.wicketType.toUpperCase() : 'OUT';
+                      desc = `🔴 OVER ${overDisplay}: WICKET! ${bowler} to ${batter} - ${wType}!`;
+                    } else if (b.extraType) {
+                      if (b.extraType === 'wide') {
+                        desc = `⚪ OVER ${overDisplay}: WIDE! ${bowler} bowls wide down leg/off. (+${b.extraRuns} Extra)`;
+                      } else if (b.extraType === 'noball') {
+                        desc = `⚠ OVER ${overDisplay}: NO BALL! ${bowler} oversteps. (+${b.extraRuns} Extra)`;
+                      } else {
+                        desc = `🔵 OVER ${overDisplay}: ${bowler} to ${batter} - ${b.extraRuns} ${b.extraType.toUpperCase()}(s).`;
+                      }
+                    } else {
+                      if (b.runs === 4) {
+                        desc = `🔥 OVER ${overDisplay}: FOUR! Shot! ${batter} drives ${bowler} past the boundary!`;
+                      } else if (b.runs === 6) {
+                        desc = `🚀 OVER ${overDisplay}: SIX! Massive strike! ${batter} hits ${bowler} high over the ropes!`;
+                      } else if (b.runs === 0) {
+                        desc = `⏹ OVER ${overDisplay}: Dot ball. ${bowler} pitches it cleanly, ${batter} plays it back.`;
+                      } else {
+                        desc = `🏏 OVER ${overDisplay}: ${bowler} to ${batter}, ${b.runs} run${b.runs > 1 ? 's' : ''} taken.`;
+                      }
+                    }
+
+                    return (
+                      <div key={b.id || idx} style={{ 
+                        padding: '6px 10px', background: b.wicket ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.02)',
+                        borderLeft: b.wicket ? '3px solid #ef4444' : (b.runs >= 4 ? '3px solid var(--brand-color-link)' : '3px solid rgba(255,255,255,0.08)'),
+                        borderRadius: '4px', lineHeight: '1.4'
+                      }}>
+                        {desc}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Match Replay Timeline */}
             {activeMatch && activeMatch.ballsLog.length > 0 && (
@@ -2360,20 +2470,43 @@ export default function App() {
             prevThreshold = 1000;
           }
 
-          let isConsistent = false;
+          let consistencyWeeks = 0;
+          let consistencyTier: 'None' | 'Bronze' | 'Silver' | 'Gold' = 'None';
+          
           if (stat.matchDates.length > 0) {
-            const sortedDates = stat.matchDates.map(d => new Date(d).getTime()).sort((a, b) => b - a);
+            // Sort matches chronologically (oldest first) to count the growing streak
+            const sortedDates = stat.matchDates.map(d => new Date(d).getTime()).sort((a, b) => a - b);
             const now = Date.now();
             const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
-            const playedLastWeek = (now - sortedDates[0]) <= sevenDaysInMs;
             
-            if (playedLastWeek) {
-              isConsistent = true;
-              for (let i = 0; i < sortedDates.length - 1; i++) {
-                if ((sortedDates[i] - sortedDates[i + 1]) > sevenDaysInMs) {
-                  isConsistent = false;
-                  break;
+            // Check if the player has played in the last 7 days; if not, the active streak is already dead (0)
+            const playedInLast7Days = (now - sortedDates[sortedDates.length - 1]) <= sevenDaysInMs;
+            
+            if (playedInLast7Days) {
+              let currentStreak = 1;
+              for (let i = 1; i < sortedDates.length; i++) {
+                const gap = sortedDates[i] - sortedDates[i - 1];
+                if (gap <= sevenDaysInMs) {
+                  // If they played in the same week, we group it as continuing the streak.
+                  // To avoid multiple matches in the same week inflating the streak, 
+                  // we only count distinct weekly boundaries.
+                  const daysDiff = gap / (24 * 60 * 60 * 1000);
+                  if (daysDiff >= 5) { // Roughly different week/end-of-week interval
+                    currentStreak++;
+                  }
+                } else {
+                  // Missed a week! Reset streak to 1 (starting fresh from this match)
+                  currentStreak = 1;
                 }
+              }
+              consistencyWeeks = currentStreak;
+              
+              if (consistencyWeeks >= 52) {
+                consistencyTier = 'Gold';
+              } else if (consistencyWeeks >= 20) {
+                consistencyTier = 'Silver';
+              } else if (consistencyWeeks >= 5) {
+                consistencyTier = 'Bronze';
               }
             }
           }
@@ -2387,7 +2520,8 @@ export default function App() {
             levelName,
             prevThreshold,
             nextThreshold,
-            isConsistent
+            consistencyWeeks,
+            consistencyTier
           };
         });
 
@@ -2576,7 +2710,7 @@ export default function App() {
                 {playerSearchQuery ? 'No players match your search query.' : 'No players onboarded yet.'}
               </div>
             ) : (
-              filteredPlayers.map(({ name, stat, boundaryCount, totalXP, level, levelName, prevThreshold, nextThreshold, isConsistent }) => {
+              filteredPlayers.map(({ name, stat, boundaryCount, totalXP, level, levelName, prevThreshold, nextThreshold, consistencyWeeks, consistencyTier }) => {
                 const percentToNextLevel = level === 5 ? 100 : Math.min(100, Math.max(0, ((totalXP - prevThreshold) / (nextThreshold - prevThreshold)) * 100));
                 const runColor = getBadgeColor(stat.runs, 100, 500, 1000);
                 const runText = getBadgeText(stat.runs, 100, 500, 1000);
@@ -2588,6 +2722,12 @@ export default function App() {
                 const matchText = getBadgeText(stat.matchesPlayed, 5, 15, 30);
                 const winColor = getBadgeColor(stat.matchesWon, 2, 5, 10);
                 const winText = getBadgeText(stat.matchesWon, 2, 5, 10);
+
+                const isConsistent = consistencyTier !== 'None';
+                const consistencyColor = 
+                  consistencyTier === 'Gold' ? '#dcaa37' : 
+                  consistencyTier === 'Silver' ? '#adadad' : 
+                  consistencyTier === 'Bronze' ? '#cd7f32' : '#7e7e7e';
 
                 return (
                   <div key={name} className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
@@ -2616,20 +2756,20 @@ export default function App() {
                         }}
                         style={{ 
                           display: 'flex', flexDirection: 'column', gap: '4px', padding: '6px 10px', borderRadius: '6px', 
-                          background: isConsistent ? 'rgba(24,86,255,0.1)' : 'rgba(255,255,255,0.03)', 
-                          border: activeTooltipId === `player-${name}-streak` ? '1px solid var(--brand-color-action)' : (isConsistent ? '1px solid rgba(24,86,255,0.2)' : '1px solid rgba(255,255,255,0.05)'),
+                          background: isConsistent ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)', 
+                          border: activeTooltipId === `player-${name}-streak` ? '1px solid var(--brand-color-action)' : '1px solid rgba(255,255,255,0.05)',
                           opacity: isConsistent ? 1 : 0.4,
                           cursor: 'pointer'
                         }}
-                        title="Consistent Player streak: Play at least 1 match every week (7 days) without missing."
+                        title={`Consistent Player streak: Play at least 1 match every week (7 days) without missing. Current: ${consistencyWeeks} consecutive weeks. (Bronze: 5, Silver: 20, Gold: 52)`}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Flame size={14} style={{ stroke: isConsistent ? 'var(--brand-color-action)' : '#7e7e7e' }} />
-                          <span style={{ fontSize: '10px', fontWeight: 600 }}>Consistent Streak</span>
+                          <Flame size={14} style={{ stroke: consistencyColor }} />
+                          <span style={{ fontSize: '10px', fontWeight: 600 }}>Consistent: {consistencyTier === 'None' ? 'None' : `${consistencyTier} (${consistencyWeeks}w)`}</span>
                         </div>
                         {activeTooltipId === `player-${name}-streak` && (
                           <div style={{ fontSize: '9px', color: '#94a3b8', marginTop: '2px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '2px' }}>
-                            Play at least 1 match every week.
+                            Consecutive weeks: {consistencyWeeks} (Bronze: 5w, Silver: 20w, Gold: 52w). Missing a week resets to 0.
                           </div>
                         )}
                       </div>
